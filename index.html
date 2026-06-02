@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InformaMZ - Agregador de Notícias de Moçambique</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+
+    <header class="bg-red-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-tight cursor-pointer" onclick="window.location.reload()">
+                Informa<span class="text-yellow-400">MZ</span>
+            </h1>
+            <p class="text-xs sm:text-sm bg-red-800 px-3 py-1 rounded-full">Atualizado em tempo real</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <h2 class="text-xl font-bold mb-6 border-b-2 border-red-700 pb-2 flex items-center gap-2">
+            <i data-lucide="newspaper"></i> Últimas Notícias de Moçambique
+        </h2>
+        
+        <div id="grid-noticias" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full text-center py-12 text-gray-500">A carregar feeds de Moçambique...</div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        // Inicializa a procura de notícias assim que a página abre
+        document.addEventListener("DOMContentLoaded", async () => {
+            await carregarDadosNoticias();
+            renderizarGridHome();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
