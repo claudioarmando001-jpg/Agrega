@@ -12,7 +12,7 @@
         :root {
             --primary: #0f172a; --accent: #0284c7; --bg: #f1f5f9; --card: #ffffff;
             --text: #0f172a; --text-meta: #64748b; --border: #e2e8f0; --radius: 20px; 
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); --sidebar-width: 280px;
+            --sidebar-width: 280px;
         }
         body.dark-mode {
             --bg: #020617; --card: #1e293b; --text: #f8fafc; --text-meta: #94a3b8;
@@ -89,7 +89,7 @@
 </header>
 
 <main class="feed" id="feed"></main>
-<div class="infinite-loader" id="infinite-loader"><i class="fas fa-spinner fa-spin"></i> Atualizando notícias globais...</div>
+<div class="infinite-loader" id="infinite-loader"><i class="fas fa-spinner fa-spin"></i> Buscando mais artigos...</div>
 
 <nav class="bottom-nav">
     <div class="nav-item active" onclick="window.location.reload()"><i class="fas fa-home"></i>Início</div>
@@ -99,25 +99,26 @@
 <script>
 const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
 const CACHE_KEY = "sn_news_cache";
-const CACHE_TIME_KEY = "sn_news_cache_time";
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
-// Proxy público para contornar erros de CORS (bloqueio de requisições externas)
 const PROXY = "https://api.allorigins.win/get?url=";
 
 const SOURCES = [
-    { name: "Times de Todos", url: "https://timesdetodos.com/wp-json/wp/v2/posts?_embed&per_page=8", useProxy: false, color: "#0284c7" },
-    { name: "O País MZ", url: "https://opais.co.mz/wp-json/wp/v2/posts?_embed&per_page=5", useProxy: true, color: "#10b981" },
-    { name: "Lance Desporto", url: "https://www.lance.com.br/wp-json/wp/v2/posts?_embed&per_page=5", useProxy: true, color: "#ea580c" },
-    { name: "Mundo Insólito", url: "https://g1.globo.com/natureza/wp-json/wp/v2/posts?_embed&per_page=5", useProxy: true, color: "#7c3aed" }
+    { name: "Times de Todos", url: "https://timesdetodos.com/wp-json/wp/v2/posts?_embed", useProxy: false, color: "#0284c7" },
+    { name: "O País MZ", url: "https://opais.co.mz/wp-json/wp/v2/posts?_embed", useProxy: true, color: "#10b981" },
+    { name: "Lance Desporto", url: "https://www.lance.com.br/wp-json/wp/v2/posts?_embed", useProxy: true, color: "#ea580c" },
+    { name: "Mundo Insólito", url: "https://g1.globo.com/natureza/wp-json/wp/v2/posts?_embed", useProxy: true, color: "#7c3aed" }
 ];
 
 let allNews = [];
+let displayedNews = [];
+let itemsPerPage = 8;
+let currentPage = 1;
 let isSearching = false;
+let isLoadingMore = false;
 
 window.onload = () => {
     if(localStorage.getItem('dark') === 'true') toggleTheme(true);
     initApp();
+    setupInfiniteScroll();
 };
 
 function toggleSidebar() {
@@ -137,39 +138,35 @@ function toggleSearch() {
     const box = document.getElementById('search-box');
     box.classList.toggle('active');
     if(box.classList.contains('active')) document.getElementById('search-input').focus();
-    else { document.getElementById('search-input').value = ""; isSearching = false; renderFeed(allNews); }
+    else { document.getElementById('search-input').value = ""; isSearching = false; renderFeed(displayedNews); }
 }
 
 function handleSearch() {
     const q = document.getElementById('search-input').value.toLowerCase();
-    if(q.trim() === "") { isSearching = false; renderFeed(allNews); return; }
+    if(q.trim() === "") { isSearching = false; renderFeed(displayedNews); return; }
     isSearching = true;
     renderFeed(allNews.filter(n => n.title.toLowerCase().includes(q)));
 }
 
-async function initApp() {
+function initApp() {
     const cachedData = localStorage.getItem(CACHE_KEY);
-    const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-    if (cachedData && cachedTime && (Date.now() - cachedTime < CACHE_DURATION)) {
+    if (cachedData) {
         allNews = JSON.parse(cachedData);
-        renderFeed(allNews);
-    } else {
-        await fetchAllSources();
+        loadMoreItems();
     }
+    // Dispara a busca em paralelo imediatamente, sem travar a tela
+    fetchInParallel();
 }
 
-async function fetchAllSources() {
-    const bar = document.getElementById('loader-bar');
-    const infLoader = document.getElementById('infinite-loader');
-    bar.style.width = '30%';
-    infLoader.classList.add('active');
+// CARREGAMENTO EM PARALELO ASÍNCRONO (NÃO BLOQUEANTE)
+async function fetchInParallel() {
+    document.getElementById('loader-bar').style.width = '40%';
     
-    let combinedNews = [];
-
-    for (const src of SOURCES) {
+    // Dispara as requisições de todas as fontes ao mesmo tempo
+    SOURCES.forEach(async (src) => {
         try {
-            let finalUrl = src.url;
-            if (src.useProxy) finalUrl = PROXY + encodeURIComponent(src.url);
+            let finalUrl = `${src.url}&per_page=12`;
+            if (src.useProxy) finalUrl = PROXY + encodeURIComponent(finalUrl);
 
             const res = await fetch(finalUrl);
             if(res.ok) {
@@ -189,29 +186,60 @@ async function fetchAllSources() {
                         img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || FALLBACK_IMG
                     };
                 });
-                combinedNews = [...combinedNews, ...formatted];
+
+                // Remove duplicados e une as novas notícias de forma limpa
+                allNews = [...allNews, ...formatted].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+                // Reordena por data recente global
+                allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                localStorage.setItem(CACHE_KEY, JSON.stringify(allNews));
+                
+                if (!isSearching) {
+                    currentPage = 1;
+                    displayedNews = [];
+                    loadMoreItems();
+                }
             }
         } catch (e) {
-            console.error(`Falha controlada ao carregar: ${src.name}`);
+            console.warn(`Erro temporário ao obter dados de: ${src.name}`);
+        } finally {
+            document.getElementById('loader-bar').style.width = '100%';
+            setTimeout(() => document.getElementById('loader-bar').style.width = '0', 400);
         }
-    }
+    });
+}
 
-    combinedNews.sort((a, b) => new Date(b.date) - new Date(a.date));
-    if(combinedNews.length > 0) {
-        allNews = combinedNews;
-        localStorage.setItem(CACHE_KEY, JSON.stringify(allNews));
-        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+function loadMoreItems() {
+    if (isLoadingMore || isSearching) return;
+    isLoadingMore = true;
+    
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const nextChunk = allNews.slice(start, end);
+
+    if(nextChunk.length > 0) {
+        displayedNews = [...displayedNews, ...nextChunk];
+        renderFeed(displayedNews);
+        currentPage++;
     }
-    renderFeed(allNews);
-    infLoader.classList.remove('active');
-    bar.style.width = '100%';
-    setTimeout(() => bar.style.width = '0', 500);
+    isLoadingMore = false;
+    document.getElementById('infinite-loader').classList.remove('active');
+}
+
+function setupInfiniteScroll() {
+    window.onscroll = () => {
+        if (isSearching) return;
+        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 300) {
+            document.getElementById('infinite-loader').classList.add('active');
+            setTimeout(loadMoreItems, 200); // Suaviza a entrada
+        }
+    };
 }
 
 function renderFeed(news) {
     const feed = document.getElementById('feed');
     if(news.length === 0) {
-        feed.innerHTML = `<p style="text-align:center; padding:20px; color:var(--text-meta);">Nenhuma notícia encontrada.</p>`;
+        feed.innerHTML = `<p style="text-align:center; padding:40px; color:var(--text-meta);">Sincronizando feed de notícias...</p>`;
         return;
     }
     feed.innerHTML = news.map(n => `
@@ -233,7 +261,7 @@ async function shareNews(id, title) {
         try { await navigator.share({ title: title, text: 'Veja esta matéria no Só Notícias:', url: fullUrl }); } catch (e) {}
     } else {
         navigator.clipboard.writeText(`${title} - ${fullUrl}`);
-        alert("Link gerado e copiado com sucesso para envio!");
+        alert("Link copiado para a área de transferência!");
     }
 }
 
@@ -243,9 +271,9 @@ function timeSince(dateString) {
     if (interval > 24) return Math.floor(interval / 24) + " dias atrás";
     if (interval < 1) {
         const mins = Math.floor(seconds / 60);
-        return mins < 1 ? "Agora mesmo" : mins + " minutos atrás";
+        return mins < 1 ? "Agora mesmo" : mins + " min atrás";
     }
-    return Math.floor(interval) + " horas atrás";
+    return Math.floor(interval) + " h atrás";
 }
 </script>
 </body>
