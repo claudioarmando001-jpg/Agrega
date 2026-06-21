@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Times de Todos - News Feed</title>
+    <title>Só Notícias - Feed</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2=family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -22,8 +22,8 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 70px; }
         
         .logo-main { 
-            font-weight: 800; font-size: 1.1rem; color: var(--accent); 
-            letter-spacing: -1px; cursor: pointer; display: flex; align-items: center; gap: 4px;
+            font-weight: 800; font-size: 1.2rem; color: var(--accent); 
+            letter-spacing: -0.5px; cursor: pointer; display: flex; align-items: center; gap: 4px;
         }
         .logo-badge { font-size:0.55rem; border:1px solid var(--accent); padding:1px 3px; border-radius:4px; vertical-align: middle; }
 
@@ -36,12 +36,15 @@
         .sidebar-overlay.active { display: block; }
 
         .feed { padding: 15px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 16px; }
-        .news-item { background: var(--card); border-radius: var(--radius); padding: 12px; display: flex; gap: 15px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s; text-decoration: none; color: inherit; }
+        .news-item { background: var(--card); border-radius: var(--radius); padding: 12px; display: flex; gap: 15px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s; text-decoration: none; color: inherit; position: relative; }
         .news-item:active { transform: scale(0.98); }
         .news-img { width: 110px; height: 110px; border-radius: 15px; object-fit: cover; background: #e2e8f0; }
-        .news-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .news-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding-right: 25px; }
         .news-title { font-size: 0.95rem; font-weight: 700; line-height: 1.4; }
         .news-source { font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; width: fit-content; color: white; text-transform: uppercase; }
+
+        .share-btn-feed { position: absolute; right: 15px; bottom: 12px; color: var(--text-meta); font-size: 1rem; cursor: pointer; z-index: 10; padding: 5px; }
+        .share-btn-feed:hover { color: var(--accent); }
 
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 2000; }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-meta); cursor: pointer; font-size: 0.65rem; font-weight: 700; }
@@ -64,10 +67,10 @@
 
 <aside class="sidebar" id="sidebar">
     <div style="font-weight:800; margin-bottom:20px; display:flex; justify-content:space-between">
-        <div class="logo-main" onclick="window.location.reload()">TIMES DE TODOS</div>
+        <div class="logo-main" onclick="window.location.reload()">SÓ NOTÍCIAS</div>
         <i class="fas fa-times" onclick="toggleSidebar()" style="cursor:pointer"></i>
     </div>
-    <div style="color: var(--text-meta); font-size: 0.9rem;">Portal Agregador de Notícias Desportivas, Gerais e Insolitas.</div>
+    <div style="color: var(--text-meta); font-size: 0.9rem;">O seu agregador central de notícias de Moçambique e do Mundo.</div>
 </aside>
 
 <header class="header">
@@ -75,7 +78,7 @@
         <div style="display:flex; align-items:center; gap:15px">
             <i class="fas fa-bars" onclick="toggleSidebar()" style="cursor:pointer"></i>
             <div class="logo-main" onclick="window.location.reload()">
-                TIMES DE TODOS <span class="logo-badge">NEWS</span>
+                SÓ NOTÍCIAS <span class="logo-badge">LIVE</span>
             </div>
         </div>
         <div style="display:flex; gap:15px; align-items:center;">
@@ -93,7 +96,7 @@
 <main class="feed" id="feed"></main>
 
 <div class="infinite-loader" id="infinite-loader">
-    <i class="fas fa-spinner fa-spin"></i> Buscando atualizações...
+    <i class="fas fa-spinner fa-spin"></i> Atualizando notícias...
 </div>
 
 <nav class="bottom-nav">
@@ -103,16 +106,15 @@
 
 <script>
 const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
-const CACHE_KEY = "tdt_news_cache";
-const CACHE_TIME_KEY = "tdt_news_cache_time";
+const CACHE_KEY = "sn_news_cache";
+const CACHE_TIME_KEY = "sn_news_cache_time";
 const CACHE_DURATION = 10 * 60 * 1000;
 
-// Lista diversificada de APIs (WP-JSON) baseada no seu escopo requisitado
 const SOURCES = [
     { name: "Times de Todos", url: "https://timesdetodos.com/wp-json/wp/v2/posts?_embed", color: "#0284c7" },
-    { name: "Moçambique News", url: "https://opais.co.mz/wp-json/wp/v2/posts?_embed", color: "#10b981" }, // Exemplo Geral MZ
-    { name: "Futebol MZ / Mundo", url: "https://www.lance.com.br/wp-json/wp/v2/posts?_embed", color: "#ea580c" }, // Exemplo Desporto Mundial
-    { name: "Insólito / Impacto", url: "https://g1.globo.com/natureza/wp-json/wp/v2/posts?_embed", color: "#7c3aed" } // Fallback Estrutural/Exemplo de insolitos e bizarros corporativos
+    { name: "Moçambique Geral", url: "https://opais.co.mz/wp-json/wp/v2/posts?_embed", color: "#10b981" },
+    { name: "Mundo & Desporto", url: "https://www.lance.com.br/wp-json/wp/v2/posts?_embed", color: "#ea580c" },
+    { name: "Insólito", url: "https://g1.globo.com/natureza/wp-json/wp/v2/posts?_embed", color: "#7c3aed" }
 ];
 
 let allNews = [];
@@ -199,11 +201,10 @@ async function fetchAllSources() {
                 combinedNews = [...combinedNews, ...formatted];
             }
         } catch (e) {
-            console.error(`Erro ao carregar fonte: ${src.name}`, e);
+            console.error(`Erro na fonte: ${src.name}`);
         }
     }
 
-    // Ordenação Cronológica (Mais Recentes Primeiro)
     combinedNews.sort((a, b) => new Date(b.date) - new Date(a.date));
     
     if(combinedNews.length > 0) {
@@ -225,15 +226,27 @@ function renderFeed(news) {
         return;
     }
     feed.innerHTML = news.map(n => `
-        <a href="leitura.html?id=${n.id}" class="news-item">
+        <div class="news-item" onclick="if(!event.target.classList.contains('fa-share-nodes')) window.location.href='leitura.html?id=${n.id}'">
             <img src="${n.img}" class="news-img" onerror="this.src='${FALLBACK_IMG}'">
             <div class="news-info">
                 <span class="news-source" style="background:${n.color}">${n.source}</span>
                 <div class="news-title">${n.title}</div>
                 <div style="font-size:0.6rem; color:var(--text-meta)">${timeSince(n.date)}</div>
             </div>
-        </a>
+            <i class="fas fa-share-nodes share-btn-feed" onclick="shareNews('${window.location.origin}/leitura.html?id=${n.id}', '${n.title.replace(/'/g, "\\'")}')" title="Compartilhar"></i>
+        </div>
     `).join('');
+}
+
+async function shareNews(url, title) {
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: title, text: 'Veja esta notícia no Só Notícias:', url: url });
+        } catch (err) { console.log("Partilha cancelada"); }
+    } else {
+        navigator.clipboard.writeText(`${title} - ${url}`);
+        alert("Link copiado para a área de transferência!");
+    }
 }
 
 function timeSince(dateString) {
