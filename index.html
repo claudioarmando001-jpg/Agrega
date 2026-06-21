@@ -154,15 +154,19 @@ function initApp() {
         allNews = JSON.parse(cachedData);
         loadMoreItems();
     }
-    // Dispara a busca em paralelo imediatamente, sem travar a tela
     fetchInParallel();
 }
 
-// CARREGAMENTO EM PARALELO ASÍNCRONO (NÃO BLOQUEANTE)
+// Criptografia segura que suporta caracteres acentuados africanos e latinos
+function safeBtoa(str) {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+        return String.fromCharCode('0x' + p1);
+    }));
+}
+
 async function fetchInParallel() {
     document.getElementById('loader-bar').style.width = '40%';
     
-    // Dispara as requisições de todas as fontes ao mesmo tempo
     SOURCES.forEach(async (src) => {
         try {
             let finalUrl = `${src.url}&per_page=12`;
@@ -173,8 +177,13 @@ async function fetchInParallel() {
                 let data = await res.json();
                 if (src.useProxy) data = JSON.parse(data.contents);
 
+                if(!Array.isArray(data)) return;
+
                 const formatted = data.map(p => {
-                    const uniqueId = btoa(unescape(encodeURIComponent(JSON.stringify({api: src.url, id: p.id}))));
+                    // ID gerado de forma limpa e segura usando a função safeBtoa
+                    const objectString = JSON.stringify({ api: src.url, id: p.id });
+                    const uniqueId = safeBtoa(objectString);
+                    
                     return {
                         id: uniqueId,
                         title: p.title?.rendered || "Sem título",
@@ -187,9 +196,7 @@ async function fetchInParallel() {
                     };
                 });
 
-                // Remove duplicados e une as novas notícias de forma limpa
                 allNews = [...allNews, ...formatted].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-                // Reordena por data recente global
                 allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
                 
                 localStorage.setItem(CACHE_KEY, JSON.stringify(allNews));
@@ -201,7 +208,7 @@ async function fetchInParallel() {
                 }
             }
         } catch (e) {
-            console.warn(`Erro temporário ao obter dados de: ${src.name}`);
+            console.warn(`Erro controlado na fonte: ${src.name}`);
         } finally {
             document.getElementById('loader-bar').style.width = '100%';
             setTimeout(() => document.getElementById('loader-bar').style.width = '0', 400);
@@ -229,9 +236,9 @@ function loadMoreItems() {
 function setupInfiniteScroll() {
     window.onscroll = () => {
         if (isSearching) return;
-        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 300) {
+        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 350) {
             document.getElementById('infinite-loader').classList.add('active');
-            setTimeout(loadMoreItems, 200); // Suaviza a entrada
+            loadMoreItems();
         }
     };
 }
@@ -239,7 +246,7 @@ function setupInfiniteScroll() {
 function renderFeed(news) {
     const feed = document.getElementById('feed');
     if(news.length === 0) {
-        feed.innerHTML = `<p style="text-align:center; padding:40px; color:var(--text-meta);">Sincronizando feed de notícias...</p>`;
+        feed.innerHTML = `<p style="text-align:center; padding:40px; color:var(--text-meta);">Buscando notícias em tempo real...</p>`;
         return;
     }
     feed.innerHTML = news.map(n => `
@@ -258,10 +265,10 @@ function renderFeed(news) {
 async function shareNews(id, title) {
     const fullUrl = `${window.location.origin}${window.location.pathname.replace('index.html','')}leitura.html?id=${id}`;
     if (navigator.share) {
-        try { await navigator.share({ title: title, text: 'Veja esta matéria no Só Notícias:', url: fullUrl }); } catch (e) {}
+        try { await navigator.share({ title: title, text: 'Veja isto no Só Notícias:', url: fullUrl }); } catch (e) {}
     } else {
         navigator.clipboard.writeText(`${title} - ${fullUrl}`);
-        alert("Link copiado para a área de transferência!");
+        alert("Link gerado e copiado!");
     }
 }
 
@@ -271,7 +278,7 @@ function timeSince(dateString) {
     if (interval > 24) return Math.floor(interval / 24) + " dias atrás";
     if (interval < 1) {
         const mins = Math.floor(seconds / 60);
-        return mins < 1 ? "Agora mesmo" : mins + " min atrás";
+        return mins < 1 ? "Agora" : mins + " min atrás";
     }
     return Math.floor(interval) + " h atrás";
 }
