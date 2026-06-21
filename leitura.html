@@ -3,38 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lendo Notícia - Só Notícias</title>
+    <title>Só Notícias - Leitura</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2=family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        :root {
-            --primary: #0f172a; --accent: #0284c7; --bg: #f1f5f9; --card: #ffffff;
-            --text: #0f172a; --text-meta: #64748b; --border: #e2e8f0; --radius: 20px; 
-        }
-        body.dark-mode {
-            --bg: #020617; --card: #1e293b; --text: #f8fafc; --text-meta: #94a3b8;
-            --border: #334155; --accent: #38bdf8;
-        }
+        :root { --primary: #0f172a; --accent: #0284c7; --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --text-meta: #64748b; --border: #e2e8f0; --radius: 20px; }
+        body.dark-mode { --bg: #020617; --card: #1e293b; --text: #f8fafc; --text-meta: #94a3b8; --border: #334155; --accent: #38bdf8; }
         * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
-        
         .header-read { position: sticky; top: 0; background: var(--card); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
         .logo-main { font-weight: 800; font-size: 1rem; color: var(--accent); letter-spacing: -0.5px; }
-        
         .article-content { padding: 20px; max-width: 800px; margin: 0 auto; }
         .article-img { width: 100%; border-radius: 20px; margin: 15px 0; object-fit: cover; max-height: 450px; }
-        
-        /* Barra de Ações (Ouvir e Partilhar) */
         .action-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
         .btn-action { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .btn-action:hover { background: var(--bg); border-color: var(--accent); }
         .btn-audio-active { background: #0284c7 !important; color: white !important; border-color: #0284c7 !important; }
-
         .wp-content p { margin-bottom: 15px; line-height: 1.7; font-size: 1rem; }
-
-        /* Relacionadas */
         .related-section { max-width: 800px; margin: 40px auto 0 auto; padding: 20px; border-top: 2px solid var(--border); }
         .related-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         .related-grid { display: flex; flex-direction: column; gap: 12px; }
@@ -43,7 +30,7 @@
         .related-thumb { width: 70px; height: 70px; border-radius: 8px; object-fit: cover; }
         .related-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         .related-headline { font-size: 0.85rem; font-weight: 700; line-height: 1.3; }
-        .related-source { font-size: 0.6rem; font-weight: 800; color: var(--accent); text-transform: uppercase; margin-top: 4px; }
+        .loading-screen { text-align: center; padding: 50px; font-size: 1.1rem; color: var(--text-meta); }
     </style>
 </head>
 <body>
@@ -57,16 +44,18 @@
 </header>
 
 <main class="article-content">
-    <div id="article-view"></div>
+    <div id="loading" class="loading-screen"><i class="fas fa-circle-notch fa-spin"></i> Descriptografando e buscando matéria...</div>
+    <div id="article-view" style="display: none;"></div>
     
-    <section class="related-section">
-        <div class="related-title"><i class="fas fa-layer-group"></i> Notícias Relacionadas</div>
+    <section class="related-section" id="related-panel" style="display:none;">
+        <div class="related-title"><i class="fas fa-layer-group"></i> Próximas Notícias do Agregador</div>
         <div class="related-grid" id="related-box"></div>
     </section>
 </main>
 
 <script>
 const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
+const PROXY = "https://api.allorigins.win/get?url=";
 
 let synth = window.speechSynthesis;
 let utterance = null;
@@ -75,12 +64,10 @@ let currentArticle = null;
 
 window.onload = () => {
     if(localStorage.getItem('dark') === 'true') toggleTheme(true);
-    loadArticle();
+    fetchArticleData();
 };
 
-window.onunload = () => {
-    if (synth) synth.cancel(); // Para o áudio imediatamente se o usuário sair da página
-};
+window.onunload = () => { if (synth) synth.cancel(); };
 
 function toggleTheme(init = false) {
     if(!init) document.body.classList.toggle('dark-mode');
@@ -90,28 +77,57 @@ function toggleTheme(init = false) {
     document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
 }
 
-function loadArticle() {
+async function fetchArticleData() {
     const params = new URLSearchParams(window.location.search);
     const artId = params.get('id');
-    const cachedNews = localStorage.getItem("sn_news_cache");
 
-    if (!artId || !cachedNews) {
-        document.getElementById('article-view').innerHTML = `<p>Artigo não encontrado. <a href="index.html">Voltar para o Feed</a></p>`;
+    if (!artId) {
+        document.getElementById('loading').innerHTML = `Erro: Link incorreto. <a href="index.html">Ir para o início</a>`;
         return;
     }
 
-    const newsArray = JSON.parse(cachedNews);
-    currentArticle = newsArray.find(n => n.id === artId);
+    try {
+        // Descriptografa os dados estruturados da API passados no ID da URL compartilhada
+        const metaData = JSON.parse(decodeURIComponent(escape(atob(artId))));
+        let requestUrl = `${metaData.api.split('&')[0]}/${metaData.id}?_embed`; // Pega o post isolado diretamente da origem
+        
+        if(metaData.api.includes('opais') || metaData.api.includes('lance') || metaData.api.includes('globo')) {
+            requestUrl = PROXY + encodeURIComponent(requestUrl);
+        }
 
-    if (!currentArticle) {
-        document.getElementById('article-view').innerHTML = `<p>Artigo indisponível. <a href="index.html">Voltar para o Feed</a></p>`;
-        return;
+        const res = await fetch(requestUrl);
+        if(res.ok) {
+            let raw = await res.json();
+            if(requestUrl.includes('allorigins')) raw = JSON.parse(raw.contents);
+
+            currentArticle = {
+                id: artId,
+                title: raw.title?.rendered || "Sem Título",
+                content: raw.content?.rendered || "",
+                link: raw.link || "#",
+                source: requestUrl.includes('timesdetodos') ? "Times de Todos" : (requestUrl.includes('opais') ? "O País MZ" : "Desporto / Mundo"),
+                date: raw.date,
+                img: raw._embedded?.['wp:featuredmedia']?.[0]?.source_url || FALLBACK_IMG
+            };
+
+            renderCurrentArticle();
+        } else {
+            throw new Error();
+        }
+    } catch (e) {
+        document.getElementById('loading').innerHTML = `Não foi possível carregar esta notícia remotamente. <a href="index.html">Voltar para o Feed</a>`;
     }
+}
 
-    document.getElementById('article-view').innerHTML = `
+function renderCurrentArticle() {
+    document.getElementById('loading').style.display = 'none';
+    const view = document.getElementById('article-view');
+    view.style.display = 'block';
+
+    view.innerHTML = `
         <h1 id="art-title" style="margin-bottom:10px; font-size: 1.6rem; line-height: 1.3;">${currentArticle.title}</h1>
         <div style="font-size:0.75rem; color:var(--text-meta); margin-bottom: 15px;">
-            Fonte: <span style="font-weight:bold; color:${currentArticle.color}">${currentArticle.source}</span> • Publicado ${timeSince(currentArticle.date)}
+            Fonte Oficial: <span style="font-weight:bold; color:#0284c7">${currentArticle.source}</span>
         </div>
         
         <div class="action-bar">
@@ -131,7 +147,22 @@ function loadArticle() {
         </button>
     `;
 
-    renderRelated(newsArray, currentArticle);
+    // Carrega alternativas da lista de relacionadas puxadas do cache interno caso existam
+    const cached = localStorage.getItem("sn_news_cache");
+    if(cached) {
+        const arr = JSON.parse(cached).filter(n => n.title !== currentArticle.title).slice(0, 5);
+        if(arr.length > 0) {
+            document.getElementById('related-panel').style.display = 'block';
+            document.getElementById('related-box').innerHTML = arr.map(r => `
+                <a href="leitura.html?id=${r.id}" class="related-item" onclick="if(window.speechSynthesis) window.speechSynthesis.cancel();">
+                    <img src="${r.img}" class="related-thumb" onerror="this.src='${FALLBACK_IMG}'">
+                    <div class="related-info">
+                        <div class="related-headline">${r.title}</div>
+                    </div>
+                </a>
+            `).join('');
+        }
+    }
 }
 
 function handleAudioPlayer() {
@@ -140,85 +171,34 @@ function handleAudioPlayer() {
     const btn = document.getElementById('btn-audio');
 
     if (!utterance) {
-        // Criar síntese a partir do título e corpo do texto estruturado limpo
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = currentArticle.content;
-        const textToSpeak = currentArticle.title + ". " + tempDiv.innerText;
-
-        utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'pt-PT'; // Sotaque em português padrão para leitura fluida
-
+        utterance = new SpeechSynthesisUtterance(currentArticle.title + ". " + tempDiv.innerText);
+        utterance.lang = 'pt-PT';
         utterance.onend = () => {
-            icon.className = 'fas fa-play';
-            text.innerText = 'Ouvir Artigo';
-            btn.classList.remove('btn-audio-active');
-            utterance = null;
-            isSpeaking = false;
+            icon.className = 'fas fa-play'; text.innerText = 'Ouvir Artigo';
+            btn.classList.remove('btn-audio-active'); utterance = null; isSpeaking = false;
         };
     }
 
     if (!isSpeaking && !synth.paused) {
-        // Iniciar
-        synth.speak(utterance);
-        isSpeaking = true;
-        icon.className = 'fas fa-pause';
-        text.innerText = 'Pausar Leitura';
+        synth.speak(utterance); isSpeaking = true;
+        icon.className = 'fas fa-pause'; text.innerText = 'Pausar Leitura';
         btn.classList.add('btn-audio-active');
     } else if (isSpeaking && !synth.paused) {
-        // Pausar
-        synth.pause();
-        icon.className = 'fas fa-play';
-        text.innerText = 'Continuar Ouvindo';
+        synth.pause(); icon.className = 'fas fa-play'; text.innerText = 'Continuar Ouvindo';
     } else if (synth.paused) {
-        // Continuar
-        synth.resume();
-        icon.className = 'fas fa-pause';
-        text.innerText = 'Pausar Leitura';
+        synth.resume(); icon.className = 'fas fa-pause'; text.innerText = 'Pausar Leitura';
     }
 }
 
 async function shareCurrentNews() {
     if (navigator.share) {
-        try {
-            await navigator.share({
-                title: currentArticle.title,
-                text: `Leia no Só Notícias: "${currentArticle.title}"`,
-                url: window.location.href
-            });
-        } catch (err) { console.log("Partilha abortada."); }
+        try { await navigator.share({ title: currentArticle.title, text: `Lendo no Só Notícias:`, url: window.location.href }); } catch (e) {}
     } else {
         navigator.clipboard.writeText(`${currentArticle.title} - ${window.location.href}`);
-        alert("Link copiado para partilhar onde desejar!");
+        alert("Link copiado para envio externo!");
     }
-}
-
-function renderRelated(allNews, currentArticle) {
-    let related = allNews.filter(n => n.id !== currentArticle.id);
-    let primaryRelated = related.filter(n => n.source === currentArticle.source);
-    let secondaryRelated = related.filter(n => n.source !== currentArticle.source);
-    let finalRelated = [...primaryRelated, ...secondaryRelated].slice(0, 5);
-
-    const relatedBox = document.getElementById('related-box');
-    relatedBox.innerHTML = finalRelated.map(r => `
-        <a href="leitura.html?id=${r.id}" class="related-item" onclick="if(window.speechSynthesis) window.speechSynthesis.cancel();">
-            <img src="${r.img}" class="related-thumb" onerror="this.src='${FALLBACK_IMG}'">
-            <div class="related-info">
-                <div class="related-headline">${r.title.substring(0, 75)}${r.title.length > 75 ? '...' : ''}</div>
-                <div class="related-source" style="color:${r.color}">${r.source}</div>
-            </div>
-        </a>
-    `).join('');
-}
-
-function timeSince(dateString) {
-    const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
-    let interval = seconds / 3600;
-    if (interval > 24) return Math.floor(interval / 24) + " dias atrás";
-    if (interval < 1) {
-        const mins = Math.floor(seconds / 60);
-        return mins < 1 ? "Agora mesmo" : mins + " minutos atrás";
-    }
-    return Math.floor(interval) + " horas atrás";
 }
 </script>
 </body>
