@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lendo Notícia - Times de Todos</title>
+    <title>Lendo Notícia - Só Notícias</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2=family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -21,19 +21,22 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
         
         .header-read { position: sticky; top: 0; background: var(--card); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
-        .logo-main { font-weight: 800; font-size: 0.9rem; color: var(--accent); letter-spacing: -1px; }
+        .logo-main { font-weight: 800; font-size: 1rem; color: var(--accent); letter-spacing: -0.5px; }
         
         .article-content { padding: 20px; max-width: 800px; margin: 0 auto; }
         .article-img { width: 100%; border-radius: 20px; margin: 15px 0; object-fit: cover; max-height: 450px; }
         
-        .btn-copy { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-bottom: 15px; transition: all 0.2s; }
-        .btn-copy.copied { background: #10b981; color: white; border-color: #10b981; }
+        /* Barra de Ações (Ouvir e Partilhar) */
+        .action-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+        .btn-action { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-action:hover { background: var(--bg); border-color: var(--accent); }
+        .btn-audio-active { background: #0284c7 !important; color: white !important; border-color: #0284c7 !important; }
 
         .wp-content p { margin-bottom: 15px; line-height: 1.7; font-size: 1rem; }
 
-        /* Aba de Relacionadas */
+        /* Relacionadas */
         .related-section { max-width: 800px; margin: 40px auto 0 auto; padding: 20px; border-top: 2px solid var(--border); }
-        .related-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .related-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         .related-grid { display: flex; flex-direction: column; gap: 12px; }
         .related-item { display: flex; gap: 12px; background: var(--card); padding: 10px; border-radius: 12px; border: 1px solid var(--border); text-decoration: none; color: inherit; transition: 0.2s; }
         .related-item:hover { transform: translateY(-2px); }
@@ -48,25 +51,35 @@
 <header class="header-read">
     <div style="display:flex; align-items:center; gap:15px">
         <i class="fas fa-arrow-left" onclick="window.location.href='index.html'" style="cursor:pointer; font-size: 1.2rem;"></i>
-        <div class="logo-main">TIMES DE TODOS</div>
+        <div class="logo-main">SÓ NOTÍCIAS</div>
     </div>
     <i class="fas fa-moon" id="theme-icon" onclick="toggleTheme()" style="cursor:pointer"></i>
 </header>
 
-<main class="article-content" id="article-view">
-    </main>
-
-<section class="related-section">
-    <div class="related-title"><i class="fas fa-layer-group"></i> Notícias Relacionadas</div>
-    <div class="related-grid" id="related-box"></div>
-</section>
+<main class="article-content">
+    <div id="article-view"></div>
+    
+    <section class="related-section">
+        <div class="related-title"><i class="fas fa-layer-group"></i> Notícias Relacionadas</div>
+        <div class="related-grid" id="related-box"></div>
+    </section>
+</main>
 
 <script>
 const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
 
+let synth = window.speechSynthesis;
+let utterance = null;
+let isSpeaking = false;
+let currentArticle = null;
+
 window.onload = () => {
     if(localStorage.getItem('dark') === 'true') toggleTheme(true);
     loadArticle();
+};
+
+window.onunload = () => {
+    if (synth) synth.cancel(); // Para o áudio imediatamente se o usuário sair da página
 };
 
 function toggleTheme(init = false) {
@@ -80,7 +93,7 @@ function toggleTheme(init = false) {
 function loadArticle() {
     const params = new URLSearchParams(window.location.search);
     const artId = params.get('id');
-    const cachedNews = localStorage.getItem("tdt_news_cache");
+    const cachedNews = localStorage.getItem("sn_news_cache");
 
     if (!artId || !cachedNews) {
         document.getElementById('article-view').innerHTML = `<p>Artigo não encontrado. <a href="index.html">Voltar para o Feed</a></p>`;
@@ -88,48 +101,106 @@ function loadArticle() {
     }
 
     const newsArray = JSON.parse(cachedNews);
-    const article = newsArray.find(n => n.id === artId);
+    currentArticle = newsArray.find(n => n.id === artId);
 
-    if (!article) {
+    if (!currentArticle) {
         document.getElementById('article-view').innerHTML = `<p>Artigo indisponível. <a href="index.html">Voltar para o Feed</a></p>`;
         return;
     }
 
-    // Renderiza artigo Principal
     document.getElementById('article-view').innerHTML = `
-        <h1 id="art-title" style="margin-bottom:10px; font-size: 1.6rem; line-height: 1.3;">${article.title}</h1>
+        <h1 id="art-title" style="margin-bottom:10px; font-size: 1.6rem; line-height: 1.3;">${currentArticle.title}</h1>
         <div style="font-size:0.75rem; color:var(--text-meta); margin-bottom: 15px;">
-            Fonte: <span style="color:${article.color}; font-weight:bold;">${article.source}</span> • Publicado ${timeSince(article.date)}
+            Fonte: <span style="font-weight:bold; color:${currentArticle.color}">${currentArticle.source}</span> • Publicado ${timeSince(currentArticle.date)}
         </div>
         
-        <button class="btn-copy" id="btn-copy" onclick="copyArticleText()">
-            <i class="far fa-copy"></i> <span>Copiar Artigo</span>
-        </button>
+        <div class="action-bar">
+            <button class="btn-action" id="btn-audio" onclick="handleAudioPlayer()">
+                <i class="fas fa-play" id="audio-icon"></i> <span id="audio-text">Ouvir Artigo</span>
+            </button>
+            <button class="btn-action" onclick="shareCurrentNews()">
+                <i class="fas fa-share-nodes"></i> Compartilhar
+            </button>
+        </div>
 
-        <img src="${article.img}" class="article-img" onerror="this.src='${FALLBACK_IMG}'">
-        <div id="art-content" class="wp-content">${article.content}</div>
+        <img src="${currentArticle.img}" class="article-img" onerror="this.src='${FALLBACK_IMG}'">
+        <div id="art-content" class="wp-content">${currentArticle.content}</div>
         
-        <button onclick="window.open('${article.link}')" style="width:100%; padding:15px; background:var(--accent); color:white; border:none; border-radius:12px; margin-top:25px; font-weight:bold; cursor:pointer;">
+        <button onclick="window.open('${currentArticle.link}')" style="width:100%; padding:15px; background:var(--accent); color:white; border:none; border-radius:12px; margin-top:25px; font-weight:bold; cursor:pointer;">
             LER NO SITE ORIGINAL <i class="fas fa-external-link-alt" style="font-size:0.8rem; margin-left:5px"></i>
         </button>
     `;
 
-    renderRelated(newsArray, article);
+    renderRelated(newsArray, currentArticle);
+}
+
+function handleAudioPlayer() {
+    const icon = document.getElementById('audio-icon');
+    const text = document.getElementById('audio-text');
+    const btn = document.getElementById('btn-audio');
+
+    if (!utterance) {
+        // Criar síntese a partir do título e corpo do texto estruturado limpo
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = currentArticle.content;
+        const textToSpeak = currentArticle.title + ". " + tempDiv.innerText;
+
+        utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'pt-PT'; // Sotaque em português padrão para leitura fluida
+
+        utterance.onend = () => {
+            icon.className = 'fas fa-play';
+            text.innerText = 'Ouvir Artigo';
+            btn.classList.remove('btn-audio-active');
+            utterance = null;
+            isSpeaking = false;
+        };
+    }
+
+    if (!isSpeaking && !synth.paused) {
+        // Iniciar
+        synth.speak(utterance);
+        isSpeaking = true;
+        icon.className = 'fas fa-pause';
+        text.innerText = 'Pausar Leitura';
+        btn.classList.add('btn-audio-active');
+    } else if (isSpeaking && !synth.paused) {
+        // Pausar
+        synth.pause();
+        icon.className = 'fas fa-play';
+        text.innerText = 'Continuar Ouvindo';
+    } else if (synth.paused) {
+        // Continuar
+        synth.resume();
+        icon.className = 'fas fa-pause';
+        text.innerText = 'Pausar Leitura';
+    }
+}
+
+async function shareCurrentNews() {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: currentArticle.title,
+                text: `Leia no Só Notícias: "${currentArticle.title}"`,
+                url: window.location.href
+            });
+        } catch (err) { console.log("Partilha abortada."); }
+    } else {
+        navigator.clipboard.writeText(`${currentArticle.title} - ${window.location.href}`);
+        alert("Link copiado para partilhar onde desejar!");
+    }
 }
 
 function renderRelated(allNews, currentArticle) {
-    // Filtra para remover a notícia atual que está sendo lida
     let related = allNews.filter(n => n.id !== currentArticle.id);
-    
-    // Tenta priorizar notícias da mesma fonte/categoria
     let primaryRelated = related.filter(n => n.source === currentArticle.source);
     let secondaryRelated = related.filter(n => n.source !== currentArticle.source);
-    
     let finalRelated = [...primaryRelated, ...secondaryRelated].slice(0, 5);
 
     const relatedBox = document.getElementById('related-box');
     relatedBox.innerHTML = finalRelated.map(r => `
-        <a href="leitura.html?id=${r.id}" class="related-item">
+        <a href="leitura.html?id=${r.id}" class="related-item" onclick="if(window.speechSynthesis) window.speechSynthesis.cancel();">
             <img src="${r.img}" class="related-thumb" onerror="this.src='${FALLBACK_IMG}'">
             <div class="related-info">
                 <div class="related-headline">${r.title.substring(0, 75)}${r.title.length > 75 ? '...' : ''}</div>
@@ -137,28 +208,6 @@ function renderRelated(allNews, currentArticle) {
             </div>
         </a>
     `).join('');
-}
-
-function copyArticleText() {
-    const title = document.getElementById('art-title').innerText;
-    const contentHtml = document.getElementById('art-content');
-    
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = contentHtml.innerHTML;
-    tempDiv.querySelectorAll('p, br, h1, h2, h3, h4').forEach(el => el.prepend('\n'));
-    const cleanContent = tempDiv.innerText.trim();
-
-    const fullTextToCopy = `${title}\n\n${cleanContent}`;
-
-    navigator.clipboard.writeText(fullTextToCopy).then(() => {
-        const btn = document.getElementById('btn-copy');
-        btn.classList.add('copied');
-        btn.innerHTML = `<i class="fas fa-check"></i> <span>Copiado!</span>`;
-        setTimeout(() => {
-            btn.classList.remove('copied');
-            btn.innerHTML = `<i class="far fa-copy"></i> <span>Copiar Artigo</span>`;
-        }, 2000);
-    });
 }
 
 function timeSince(dateString) {
