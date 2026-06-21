@@ -13,23 +13,21 @@
         body.dark-mode { --bg: #020617; --card: #1e293b; --text: #f8fafc; --text-meta: #94a3b8; --border: #334155; --accent: #38bdf8; }
         * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
+        
         .header-read { position: sticky; top: 0; background: var(--card); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
         .logo-main { font-weight: 800; font-size: 1rem; color: var(--accent); letter-spacing: -0.5px; }
         .article-content { padding: 20px; max-width: 800px; margin: 0 auto; }
         .article-img { width: 100%; border-radius: 20px; margin: 15px 0; object-fit: cover; max-height: 450px; }
-        .action-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
-        .btn-action { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .btn-action:hover { background: var(--bg); border-color: var(--accent); }
-        .btn-audio-active { background: #0284c7 !important; color: white !important; border-color: #0284c7 !important; }
-        .wp-content p { margin-bottom: 15px; line-height: 1.7; font-size: 1rem; }
-        .related-section { max-width: 800px; margin: 40px auto 0 auto; padding: 20px; border-top: 2px solid var(--border); }
-        .related-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
-        .related-grid { display: flex; flex-direction: column; gap: 12px; }
-        .related-item { display: flex; gap: 12px; background: var(--card); padding: 10px; border-radius: 12px; border: 1px solid var(--border); text-decoration: none; color: inherit; transition: 0.2s; }
-        .related-item:hover { transform: translateY(-2px); }
-        .related-thumb { width: 70px; height: 70px; border-radius: 8px; object-fit: cover; }
-        .related-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .related-headline { font-size: 0.85rem; font-weight: 700; line-height: 1.3; }
+        
+        .action-bar { display: flex; gap: 10px; margin: 15px 0 25px 0; align-items: center; }
+        .btn-action { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 100px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn-action.active { background: #facc15; color: #000; border-color: #facc15; }
+
+        .wp-content { line-height: 1.75; font-size: 1.05rem; }
+        .wp-content p { margin-bottom: 18px; }
+        .wp-content img { width: 100%; border-radius: 12px; margin: 15px 0; }
+        
+        .source-tag { font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; color: white; text-transform: uppercase; width: fit-content; margin-bottom: 10px; }
         .loading-screen { text-align: center; padding: 50px; font-size: 1.1rem; color: var(--text-meta); }
     </style>
 </head>
@@ -37,7 +35,7 @@
 
 <header class="header-read">
     <div style="display:flex; align-items:center; gap:15px">
-        <i class="fas fa-arrow-left" onclick="window.location.href='index.html'" style="cursor:pointer; font-size: 1.2rem;"></i>
+        <a href="index.html" style="color:inherit; text-decoration:none;"><i class="fas fa-arrow-left" style="font-size: 1.2rem;"></i></a>
         <div class="logo-main">SÓ NOTÍCIAS</div>
     </div>
     <i class="fas fa-moon" id="theme-icon" onclick="toggleTheme()" style="cursor:pointer"></i>
@@ -45,167 +43,126 @@
 
 <main class="article-content">
     <div id="loading" class="loading-screen"><i class="fas fa-circle-notch fa-spin"></i> Abrindo artigo...</div>
-    <div id="article-view" style="display: none;"></div>
     
-    <section class="related-section" id="related-panel" style="display:none;">
-        <div class="related-title"><i class="fas fa-layer-group"></i> Outras Notícias</div>
-        <div class="related-grid" id="related-box"></div>
-    </section>
+    <div id="article-view" style="display: none;">
+        <div id="source-label" class="source-tag">...</div>
+        <h1 id="title" style="font-size: 1.6rem; line-height: 1.3; margin-bottom: 10px;">...</h1>
+        
+        <div class="action-bar">
+            <button id="saveBtn" class="btn-action" onclick="toggleSave()">
+                <i class="far fa-bookmark"></i> Guardar para ler depois
+            </button>
+            <button class="btn-action" onclick="share()">
+                <i class="fas fa-share-alt"></i> Compartilhar
+            </button>
+        </div>
+
+        <img id="feat-img" class="article-img" style="display:none">
+        <div id="content" class="wp-content"></div>
+    </div>
 </main>
 
 <script>
-const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
-const PROXY = "https://api.allorigins.win/get?url=";
+    const APIS = { 
+        'opais': 'https://opais.co.mz/wp-json/wp/v2/posts/', 
+        'carta': 'https://cartamz.com/wp-json/wp/v2/posts/', 
+        'mznews': 'https://mznews.co.mz/wp-json/wp/v2/posts/',
+        'folha': 'https://www.folhademaputo.co.mz/wp-json/wp/v2/posts/',
+        'evidencias': 'https://evidencias.co.mz/wp-json/wp/v2/posts/',
+        'integrity': 'https://integritymag.co.mz/wp-json/wp/v2/posts/',
+        'mais': 'https://mais.co.mz/wp-json/wp/v2/posts/'
+    };
+    
+    const PROXY = "https://api.allorigins.win/get?url=";
+    let currentPost = null;
 
-let synth = window.speechSynthesis;
-let utterance = null;
-let isSpeaking = false;
-let currentArticle = null;
+    window.onload = () => {
+        if(localStorage.getItem('dark') === 'true') toggleTheme(true);
+        loadArticle();
+    };
 
-window.onload = () => {
-    if(localStorage.getItem('dark') === 'true') toggleTheme(true);
-    fetchArticleData();
-};
-
-window.onunload = () => { if (synth) synth.cancel(); };
-
-function toggleTheme(init = false) {
-    if(!init) document.body.classList.toggle('dark-mode');
-    else document.body.classList.add('dark-mode');
-    const isDark = document.body.classList.contains('dark-mode');
-    localStorage.setItem('dark', isDark);
-    document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-}
-
-// Decodificação segura para links com acentos
-function safeAtob(str) {
-    return decodeURIComponent(atob(str).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-}
-
-async function fetchArticleData() {
-    const params = new URLSearchParams(window.location.search);
-    const artId = params.get('id');
-
-    if (!artId) {
-        document.getElementById('loading').innerHTML = `Link incorreto. <a href="index.html">Voltar</a>`;
-        return;
+    function toggleTheme(init = false) {
+        if(!init) document.body.classList.toggle('dark-mode');
+        else document.body.classList.add('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('dark', isDark);
+        document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
     }
 
-    try {
-        const decodedString = safeAtob(artId);
-        const metaData = JSON.parse(decodedString);
+    function safeAtob(str) {
+        return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    }
+
+    async function loadArticle() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const feedId = urlParams.get('feed');
         
-        let requestUrl = `${metaData.api.split('&')[0]}/${metaData.id}?_embed`;
-        
-        if(metaData.api.includes('opais') || metaData.api.includes('lance') || metaData.api.includes('globo')) {
-            requestUrl = PROXY + encodeURIComponent(requestUrl);
+        if(!feedId) {
+            document.getElementById('loading').innerText = "Link Inválido.";
+            return;
         }
 
-        const res = await fetch(requestUrl);
-        if(res.ok) {
-            let raw = await res.json();
-            if(requestUrl.includes('allorigins')) raw = JSON.parse(raw.contents);
+        try {
+            const decrypted = JSON.parse(safeAtob(feedId));
+            const targetUrl = `${APIS[decrypted.slug]}${decrypted.id}?_embed`;
 
-            currentArticle = {
-                id: artId,
-                title: raw.title?.rendered || "Sem Título",
-                content: raw.content?.rendered || "",
-                link: raw.link || "#",
-                source: requestUrl.includes('timesdetodos') ? "Times de Todos" : (requestUrl.includes('opais') ? "O País MZ" : (requestUrl.includes('lance') ? "Lance Desporto" : "Mundo")),
-                img: raw._embedded?.['wp:featuredmedia']?.[0]?.source_url || FALLBACK_IMG
-            };
+            const res = await fetch(PROXY + encodeURIComponent(targetUrl));
+            if(res.ok) {
+                const raw = await res.json();
+                const p = JSON.parse(raw.contents);
 
-            renderCurrentArticle();
-        } else {
-            throw new Error();
-        }
-    } catch (e) {
-        document.getElementById('loading').innerHTML = `Artigo não disponível no momento. <a href="index.html">Voltar ao Feed</a>`;
-    }
-}
+                currentPost = { 
+                    id: p.id, 
+                    title: p.title?.rendered, 
+                    srcSlug: decrypted.slug, 
+                    srcName: decrypted.slug.toUpperCase(),
+                    img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || '',
+                    link: window.location.href,
+                    date: p.date
+                };
 
-function renderCurrentArticle() {
-    document.getElementById('loading').style.display = 'none';
-    const view = document.getElementById('article-view');
-    view.style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('article-view').style.display = 'block';
 
-    view.innerHTML = `
-        <h1 style="margin-bottom:10px; font-size: 1.6rem; line-height: 1.3;">${currentArticle.title}</h1>
-        <div style="font-size:0.75rem; color:var(--text-meta); margin-bottom: 15px;">
-            Fonte: <span style="font-weight:bold; color:#0284c7">${currentArticle.source}</span>
-        </div>
-        
-        <div class="action-bar">
-            <button class="btn-action" id="btn-audio" onclick="handleAudioPlayer()">
-                <i class="fas fa-play" id="audio-icon"></i> <span id="audio-text">Ouvir Artigo</span>
-            </button>
-            <button class="btn-action" onclick="shareCurrentNews()">
-                <i class="fas fa-share-nodes"></i> Compartilhar
-            </button>
-        </div>
-
-        <img src="${currentArticle.img}" class="article-img" onerror="this.src='${FALLBACK_IMG}'">
-        <div class="wp-content">${currentArticle.content}</div>
-        
-        <button onclick="window.open('${currentArticle.link}')" style="width:100%; padding:15px; background:var(--accent); color:white; border:none; border-radius:12px; margin-top:25px; font-weight:bold; cursor:pointer;">
-            LER NO SITE ORIGINAL <i class="fas fa-external-link-alt" style="font-size:0.8rem; margin-left:5px"></i>
-        </button>
-    `;
-
-    const cached = localStorage.getItem("sn_news_cache");
-    if(cached) {
-        const arr = JSON.parse(cached).filter(n => n.id !== currentArticle.id).slice(0, 5);
-        if(arr.length > 0) {
-            document.getElementById('related-panel').style.display = 'block';
-            document.getElementById('related-box').innerHTML = arr.map(r => `
-                <a href="leitura.html?id=${r.id}" class="related-item" onclick="if(window.speechSynthesis) window.speechSynthesis.cancel();">
-                    <img src="${r.img}" class="related-thumb" onerror="this.src='${FALLBACK_IMG}'">
-                    <div class="related-info">
-                        <div class="related-headline">${r.title}</div>
-                    </div>
-                </a>
-            `).join('');
+                document.getElementById('source-label').innerText = currentPost.srcName;
+                document.getElementById('title').innerHTML = p.title.rendered;
+                document.getElementById('content').innerHTML = p.content.rendered;
+                
+                if(currentPost.img) {
+                    const img = document.getElementById('feat-img');
+                    img.src = currentPost.img;
+                    img.style.display = 'block';
+                }
+                updateSaveBtn();
+            }
+        } catch(e) { 
+            document.getElementById('loading').innerText = "Erro ao carregar conteúdo."; 
         }
     }
-}
 
-function handleAudioPlayer() {
-    const icon = document.getElementById('audio-icon');
-    const text = document.getElementById('audio-text');
-    const btn = document.getElementById('btn-audio');
-
-    if (!utterance) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = currentArticle.content;
-        utterance = new SpeechSynthesisUtterance(currentArticle.title + ". " + tempDiv.innerText);
-        utterance.lang = 'pt-PT';
-        utterance.onend = () => {
-            icon.className = 'fas fa-play'; text.innerText = 'Ouvir Artigo';
-            btn.classList.remove('btn-audio-active'); utterance = null; isSpeaking = false;
-        };
+    function toggleSave() {
+        if(!currentPost) return;
+        let saved = JSON.parse(localStorage.getItem('cld_saved') || '[]');
+        const idx = saved.findIndex(x => x.id === currentPost.id && x.srcSlug === currentPost.srcSlug);
+        idx > -1 ? saved.splice(idx, 1) : saved.push(currentPost);
+        localStorage.setItem('cld_saved', JSON.stringify(saved));
+        updateSaveBtn();
     }
 
-    if (!isSpeaking && !synth.paused) {
-        synth.speak(utterance); isSpeaking = true;
-        icon.className = 'fas fa-pause'; text.innerText = 'Pausar Leitura';
-        btn.classList.add('btn-audio-active');
-    } else if (isSpeaking && !synth.paused) {
-        synth.pause(); icon.className = 'fas fa-play'; text.innerText = 'Continuar Ouvindo';
-    } else if (synth.paused) {
-        synth.resume(); icon.className = 'fas fa-pause'; text.innerText = 'Pausar Leitura';
+    function updateSaveBtn() {
+        if(!currentPost) return;
+        const saved = JSON.parse(localStorage.getItem('cld_saved') || '[]');
+        const isSaved = saved.some(x => x.id === currentPost.id && x.srcSlug === currentPost.srcSlug);
+        const btn = document.getElementById('saveBtn');
+        btn.classList.toggle('active', isSaved);
+        btn.innerHTML = isSaved ? '<i class="fas fa-bookmark"></i> Guardada' : '<i class="far fa-bookmark"></i> Guardar para ler depois';
     }
-}
 
-async function shareCurrentNews() {
-    if (navigator.share) {
-        try { await navigator.share({ title: currentArticle.title, text: `Lendo no Só Notícias:`, url: window.location.href }); } catch (e) {}
-    } else {
-        navigator.clipboard.writeText(`${currentArticle.title} - ${window.location.href}`);
-        alert("Link copiado!");
+    function share() { 
+        if(currentPost && navigator.share) {
+            navigator.share({ title: currentPost.title, url: window.location.href }); 
+        }
     }
-}
 </script>
 </body>
 </html>
