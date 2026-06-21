@@ -44,11 +44,11 @@
 </header>
 
 <main class="article-content">
-    <div id="loading" class="loading-screen"><i class="fas fa-circle-notch fa-spin"></i> Descriptografando e buscando matéria...</div>
+    <div id="loading" class="loading-screen"><i class="fas fa-circle-notch fa-spin"></i> Abrindo artigo...</div>
     <div id="article-view" style="display: none;"></div>
     
     <section class="related-section" id="related-panel" style="display:none;">
-        <div class="related-title"><i class="fas fa-layer-group"></i> Próximas Notícias do Agregador</div>
+        <div class="related-title"><i class="fas fa-layer-group"></i> Outras Notícias</div>
         <div class="related-grid" id="related-box"></div>
     </section>
 </main>
@@ -77,19 +77,27 @@ function toggleTheme(init = false) {
     document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
 }
 
+// Decodificação segura para links com acentos
+function safeAtob(str) {
+    return decodeURIComponent(atob(str).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+}
+
 async function fetchArticleData() {
     const params = new URLSearchParams(window.location.search);
     const artId = params.get('id');
 
     if (!artId) {
-        document.getElementById('loading').innerHTML = `Erro: Link incorreto. <a href="index.html">Ir para o início</a>`;
+        document.getElementById('loading').innerHTML = `Link incorreto. <a href="index.html">Voltar</a>`;
         return;
     }
 
     try {
-        // Descriptografa os dados estruturados da API passados no ID da URL compartilhada
-        const metaData = JSON.parse(decodeURIComponent(escape(atob(artId))));
-        let requestUrl = `${metaData.api.split('&')[0]}/${metaData.id}?_embed`; // Pega o post isolado diretamente da origem
+        const decodedString = safeAtob(artId);
+        const metaData = JSON.parse(decodedString);
+        
+        let requestUrl = `${metaData.api.split('&')[0]}/${metaData.id}?_embed`;
         
         if(metaData.api.includes('opais') || metaData.api.includes('lance') || metaData.api.includes('globo')) {
             requestUrl = PROXY + encodeURIComponent(requestUrl);
@@ -105,8 +113,7 @@ async function fetchArticleData() {
                 title: raw.title?.rendered || "Sem Título",
                 content: raw.content?.rendered || "",
                 link: raw.link || "#",
-                source: requestUrl.includes('timesdetodos') ? "Times de Todos" : (requestUrl.includes('opais') ? "O País MZ" : "Desporto / Mundo"),
-                date: raw.date,
+                source: requestUrl.includes('timesdetodos') ? "Times de Todos" : (requestUrl.includes('opais') ? "O País MZ" : (requestUrl.includes('lance') ? "Lance Desporto" : "Mundo")),
                 img: raw._embedded?.['wp:featuredmedia']?.[0]?.source_url || FALLBACK_IMG
             };
 
@@ -115,7 +122,7 @@ async function fetchArticleData() {
             throw new Error();
         }
     } catch (e) {
-        document.getElementById('loading').innerHTML = `Não foi possível carregar esta notícia remotamente. <a href="index.html">Voltar para o Feed</a>`;
+        document.getElementById('loading').innerHTML = `Artigo não disponível no momento. <a href="index.html">Voltar ao Feed</a>`;
     }
 }
 
@@ -125,9 +132,9 @@ function renderCurrentArticle() {
     view.style.display = 'block';
 
     view.innerHTML = `
-        <h1 id="art-title" style="margin-bottom:10px; font-size: 1.6rem; line-height: 1.3;">${currentArticle.title}</h1>
+        <h1 style="margin-bottom:10px; font-size: 1.6rem; line-height: 1.3;">${currentArticle.title}</h1>
         <div style="font-size:0.75rem; color:var(--text-meta); margin-bottom: 15px;">
-            Fonte Oficial: <span style="font-weight:bold; color:#0284c7">${currentArticle.source}</span>
+            Fonte: <span style="font-weight:bold; color:#0284c7">${currentArticle.source}</span>
         </div>
         
         <div class="action-bar">
@@ -140,17 +147,16 @@ function renderCurrentArticle() {
         </div>
 
         <img src="${currentArticle.img}" class="article-img" onerror="this.src='${FALLBACK_IMG}'">
-        <div id="art-content" class="wp-content">${currentArticle.content}</div>
+        <div class="wp-content">${currentArticle.content}</div>
         
         <button onclick="window.open('${currentArticle.link}')" style="width:100%; padding:15px; background:var(--accent); color:white; border:none; border-radius:12px; margin-top:25px; font-weight:bold; cursor:pointer;">
             LER NO SITE ORIGINAL <i class="fas fa-external-link-alt" style="font-size:0.8rem; margin-left:5px"></i>
         </button>
     `;
 
-    // Carrega alternativas da lista de relacionadas puxadas do cache interno caso existam
     const cached = localStorage.getItem("sn_news_cache");
     if(cached) {
-        const arr = JSON.parse(cached).filter(n => n.title !== currentArticle.title).slice(0, 5);
+        const arr = JSON.parse(cached).filter(n => n.id !== currentArticle.id).slice(0, 5);
         if(arr.length > 0) {
             document.getElementById('related-panel').style.display = 'block';
             document.getElementById('related-box').innerHTML = arr.map(r => `
@@ -197,7 +203,7 @@ async function shareCurrentNews() {
         try { await navigator.share({ title: currentArticle.title, text: `Lendo no Só Notícias:`, url: window.location.href }); } catch (e) {}
     } else {
         navigator.clipboard.writeText(`${currentArticle.title} - ${window.location.href}`);
-        alert("Link copiado para envio externo!");
+        alert("Link copiado!");
     }
 }
 </script>
