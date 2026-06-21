@@ -2,40 +2,250 @@
 <html lang="pt-MZ">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InformaMZ - Agregador de Notícias de Moçambique</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-gray-50 text-gray-900 font-sans">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Times de Todos - News Feed</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2=family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <header class="bg-red-700 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold tracking-tight cursor-pointer" onclick="window.location.reload()">
-                Informa<span class="text-yellow-400">MZ</span>
-            </h1>
-            <p class="text-xs sm:text-sm bg-red-800 px-3 py-1 rounded-full">Atualizado em tempo real</p>
-        </div>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-4 py-6">
-        <h2 class="text-xl font-bold mb-6 border-b-2 border-red-700 pb-2 flex items-center gap-2">
-            <i data-lucide="newspaper"></i> Últimas Notícias de Moçambique
-        </h2>
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #0284c7; --bg: #f1f5f9; --card: #ffffff;
+            --text: #0f172a; --text-meta: #64748b; --border: #e2e8f0; --radius: 20px; 
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); --sidebar-width: 280px;
+        }
+        body.dark-mode {
+            --bg: #020617; --card: #1e293b; --text: #f8fafc; --text-meta: #94a3b8;
+            --border: #334155; --accent: #38bdf8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 70px; }
         
-        <div id="grid-noticias" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full text-center py-12 text-gray-500">A carregar feeds de Moçambique...</div>
-        </div>
-    </main>
+        .logo-main { 
+            font-weight: 800; font-size: 1.1rem; color: var(--accent); 
+            letter-spacing: -1px; cursor: pointer; display: flex; align-items: center; gap: 4px;
+        }
+        .logo-badge { font-size:0.55rem; border:1px solid var(--accent); padding:1px 3px; border-radius:4px; vertical-align: middle; }
 
-    <script src="app.js"></script>
-    <script>
-        // Inicializa a procura de notícias assim que a página abre
-        document.addEventListener("DOMContentLoaded", async () => {
-            await carregarDadosNoticias();
-            renderizarGridHome();
-            lucide.createIcons();
-        });
-    </script>
+        .header { position: sticky; top: 0; z-index: 1000; background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 16px; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; }
+        
+        .sidebar { position: fixed; top: 0; left: calc(-1 * var(--sidebar-width)); width: var(--sidebar-width); height: 100%; background: var(--card); z-index: 6000; transition: 0.3s; border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; }
+        .sidebar.active { left: 0; }
+        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 5900; display: none; backdrop-filter: blur(2px); }
+        .sidebar-overlay.active { display: block; }
+
+        .feed { padding: 15px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 16px; }
+        .news-item { background: var(--card); border-radius: var(--radius); padding: 12px; display: flex; gap: 15px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s; text-decoration: none; color: inherit; }
+        .news-item:active { transform: scale(0.98); }
+        .news-img { width: 110px; height: 110px; border-radius: 15px; object-fit: cover; background: #e2e8f0; }
+        .news-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .news-title { font-size: 0.95rem; font-weight: 700; line-height: 1.4; }
+        .news-source { font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; width: fit-content; color: white; text-transform: uppercase; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 2000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-meta); cursor: pointer; font-size: 0.65rem; font-weight: 700; }
+        .nav-item.active { color: var(--accent); }
+
+        .loader-bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); z-index: 10000; transition: width 0.3s; width: 0; }
+        .infinite-loader { text-align: center; padding: 20px 0; color: var(--text-meta); font-size: 0.85rem; font-weight: 600; display: none; }
+        .infinite-loader.active { display: block; }
+
+        .search-container { margin: 10px auto; max-width: 800px; position: relative; display: none; }
+        .search-container.active { display: block; }
+        .search-input { width: 100%; padding: 12px 40px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-meta); }
+    </style>
+</head>
+<body>
+
+<div class="loader-bar" id="loader-bar"></div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div style="font-weight:800; margin-bottom:20px; display:flex; justify-content:space-between">
+        <div class="logo-main" onclick="window.location.reload()">TIMES DE TODOS</div>
+        <i class="fas fa-times" onclick="toggleSidebar()" style="cursor:pointer"></i>
+    </div>
+    <div style="color: var(--text-meta); font-size: 0.9rem;">Portal Agregador de Notícias Desportivas, Gerais e Insolitas.</div>
+</aside>
+
+<header class="header">
+    <div class="header-top">
+        <div style="display:flex; align-items:center; gap:15px">
+            <i class="fas fa-bars" onclick="toggleSidebar()" style="cursor:pointer"></i>
+            <div class="logo-main" onclick="window.location.reload()">
+                TIMES DE TODOS <span class="logo-badge">NEWS</span>
+            </div>
+        </div>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <i class="fas fa-search" onclick="toggleSearch()" style="cursor:pointer"></i>
+            <i class="fas fa-moon" id="theme-icon" onclick="toggleTheme()" style="cursor:pointer"></i>
+        </div>
+    </div>
+    
+    <div class="search-container" id="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="search-input" id="search-input" placeholder="Pesquisar notícias..." oninput="handleSearch()">
+    </div>
+</header>
+
+<main class="feed" id="feed"></main>
+
+<div class="infinite-loader" id="infinite-loader">
+    <i class="fas fa-spinner fa-spin"></i> Buscando atualizações...
+</div>
+
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="window.location.reload()"><i class="fas fa-home"></i>Início</div>
+    <div class="nav-item" onclick="toggleSidebar()"><i class="fas fa-bars"></i>Menu</div>
+</nav>
+
+<script>
+const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
+const CACHE_KEY = "tdt_news_cache";
+const CACHE_TIME_KEY = "tdt_news_cache_time";
+const CACHE_DURATION = 10 * 60 * 1000;
+
+// Lista diversificada de APIs (WP-JSON) baseada no seu escopo requisitado
+const SOURCES = [
+    { name: "Times de Todos", url: "https://timesdetodos.com/wp-json/wp/v2/posts?_embed", color: "#0284c7" },
+    { name: "Moçambique News", url: "https://opais.co.mz/wp-json/wp/v2/posts?_embed", color: "#10b981" }, // Exemplo Geral MZ
+    { name: "Futebol MZ / Mundo", url: "https://www.lance.com.br/wp-json/wp/v2/posts?_embed", color: "#ea580c" }, // Exemplo Desporto Mundial
+    { name: "Insólito / Impacto", url: "https://g1.globo.com/natureza/wp-json/wp/v2/posts?_embed", color: "#7c3aed" } // Fallback Estrutural/Exemplo de insolitos e bizarros corporativos
+];
+
+let allNews = [];
+let isSearching = false;
+
+window.onload = () => {
+    if(localStorage.getItem('dark') === 'true') toggleTheme(true);
+    initApp();
+};
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('active');
+    document.getElementById('sidebar-overlay').classList.toggle('active');
+}
+
+function toggleTheme(init = false) {
+    if(!init) document.body.classList.toggle('dark-mode');
+    else document.body.classList.add('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('dark', isDark);
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+}
+
+function toggleSearch() {
+    const box = document.getElementById('search-box');
+    box.classList.toggle('active');
+    if(box.classList.contains('active')) {
+        document.getElementById('search-input').focus();
+    } else {
+        document.getElementById('search-input').value = "";
+        isSearching = false;
+        renderFeed(allNews);
+    }
+}
+
+function handleSearch() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    if(q.trim() === "") {
+        isSearching = false;
+        renderFeed(allNews);
+        return;
+    }
+    isSearching = true;
+    const f = allNews.filter(n => n.title.toLowerCase().includes(q));
+    renderFeed(f);
+}
+
+async function initApp() {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+    const now = Date.now();
+
+    if (cachedData && cachedTime && (now - cachedTime < CACHE_DURATION)) {
+        allNews = JSON.parse(cachedData);
+        renderFeed(allNews);
+    } else {
+        await fetchAllSources();
+    }
+}
+
+async function fetchAllSources() {
+    const bar = document.getElementById('loader-bar');
+    const infLoader = document.getElementById('infinite-loader');
+    bar.style.width = '30%';
+    infLoader.classList.add('active');
+    
+    let combinedNews = [];
+
+    for (const src of SOURCES) {
+        try {
+            const res = await fetch(`${src.url}&per_page=6`);
+            if(res.ok) {
+                const data = await res.json();
+                const formatted = data.map(p => ({
+                    id: src.name.replace(/\s+/g, '') + '-' + p.id,
+                    title: p.title?.rendered || "Sem título",
+                    content: p.content?.rendered || "",
+                    link: p.link || "#",
+                    source: src.name,
+                    color: src.color,
+                    date: p.date ? new Date(p.date).toISOString() : new Date().toISOString(),
+                    img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || FALLBACK_IMG
+                }));
+                combinedNews = [...combinedNews, ...formatted];
+            }
+        } catch (e) {
+            console.error(`Erro ao carregar fonte: ${src.name}`, e);
+        }
+    }
+
+    // Ordenação Cronológica (Mais Recentes Primeiro)
+    combinedNews.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    if(combinedNews.length > 0) {
+        allNews = combinedNews;
+        localStorage.setItem(CACHE_KEY, JSON.stringify(allNews));
+        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+    }
+    
+    renderFeed(allNews);
+    infLoader.classList.remove('active');
+    bar.style.width = '100%';
+    setTimeout(() => bar.style.width = '0', 500);
+}
+
+function renderFeed(news) {
+    const feed = document.getElementById('feed');
+    if(news.length === 0) {
+        feed.innerHTML = `<p style="text-align:center; padding:20px; color:var(--text-meta);">Nenhuma notícia encontrada.</p>`;
+        return;
+    }
+    feed.innerHTML = news.map(n => `
+        <a href="leitura.html?id=${n.id}" class="news-item">
+            <img src="${n.img}" class="news-img" onerror="this.src='${FALLBACK_IMG}'">
+            <div class="news-info">
+                <span class="news-source" style="background:${n.color}">${n.source}</span>
+                <div class="news-title">${n.title}</div>
+                <div style="font-size:0.6rem; color:var(--text-meta)">${timeSince(n.date)}</div>
+            </div>
+        </a>
+    `).join('');
+}
+
+function timeSince(dateString) {
+    const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+    let interval = seconds / 3600;
+    if (interval > 24) return Math.floor(interval / 24) + " dias atrás";
+    if (interval < 1) {
+        const mins = Math.floor(seconds / 60);
+        return mins < 1 ? "Agora mesmo" : mins + " minutos atrás";
+    }
+    return Math.floor(interval) + " horas atrás";
+}
+</script>
 </body>
 </html>
