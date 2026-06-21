@@ -21,12 +21,8 @@
         * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 70px; }
         
-        .logo-main { 
-            font-weight: 800; font-size: 1.2rem; color: var(--accent); 
-            letter-spacing: -0.5px; cursor: pointer; display: flex; align-items: center; gap: 4px;
-        }
+        .logo-main { font-weight: 800; font-size: 1.2rem; color: var(--accent); letter-spacing: -0.5px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
         .logo-badge { font-size:0.55rem; border:1px solid var(--accent); padding:1px 3px; border-radius:4px; vertical-align: middle; }
-
         .header { position: sticky; top: 0; z-index: 1000; background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 16px; }
         .header-top { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; }
         
@@ -86,7 +82,6 @@
             <i class="fas fa-moon" id="theme-icon" onclick="toggleTheme()" style="cursor:pointer"></i>
         </div>
     </div>
-    
     <div class="search-container" id="search-box">
         <i class="fas fa-search search-icon"></i>
         <input type="text" class="search-input" id="search-input" placeholder="Pesquisar notícias..." oninput="handleSearch()">
@@ -94,10 +89,7 @@
 </header>
 
 <main class="feed" id="feed"></main>
-
-<div class="infinite-loader" id="infinite-loader">
-    <i class="fas fa-spinner fa-spin"></i> Atualizando notícias...
-</div>
+<div class="infinite-loader" id="infinite-loader"><i class="fas fa-spinner fa-spin"></i> Atualizando notícias globais...</div>
 
 <nav class="bottom-nav">
     <div class="nav-item active" onclick="window.location.reload()"><i class="fas fa-home"></i>Início</div>
@@ -108,13 +100,16 @@
 const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
 const CACHE_KEY = "sn_news_cache";
 const CACHE_TIME_KEY = "sn_news_cache_time";
-const CACHE_DURATION = 10 * 60 * 1000;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+// Proxy público para contornar erros de CORS (bloqueio de requisições externas)
+const PROXY = "https://api.allorigins.win/get?url=";
 
 const SOURCES = [
-    { name: "Times de Todos", url: "https://timesdetodos.com/wp-json/wp/v2/posts?_embed", color: "#0284c7" },
-    { name: "Moçambique Geral", url: "https://opais.co.mz/wp-json/wp/v2/posts?_embed", color: "#10b981" },
-    { name: "Mundo & Desporto", url: "https://www.lance.com.br/wp-json/wp/v2/posts?_embed", color: "#ea580c" },
-    { name: "Insólito", url: "https://g1.globo.com/natureza/wp-json/wp/v2/posts?_embed", color: "#7c3aed" }
+    { name: "Times de Todos", url: "https://timesdetodos.com/wp-json/wp/v2/posts?_embed&per_page=8", useProxy: false, color: "#0284c7" },
+    { name: "O País MZ", url: "https://opais.co.mz/wp-json/wp/v2/posts?_embed&per_page=5", useProxy: true, color: "#10b981" },
+    { name: "Lance Desporto", url: "https://www.lance.com.br/wp-json/wp/v2/posts?_embed&per_page=5", useProxy: true, color: "#ea580c" },
+    { name: "Mundo Insólito", url: "https://g1.globo.com/natureza/wp-json/wp/v2/posts?_embed&per_page=5", useProxy: true, color: "#7c3aed" }
 ];
 
 let allNews = [];
@@ -141,33 +136,21 @@ function toggleTheme(init = false) {
 function toggleSearch() {
     const box = document.getElementById('search-box');
     box.classList.toggle('active');
-    if(box.classList.contains('active')) {
-        document.getElementById('search-input').focus();
-    } else {
-        document.getElementById('search-input').value = "";
-        isSearching = false;
-        renderFeed(allNews);
-    }
+    if(box.classList.contains('active')) document.getElementById('search-input').focus();
+    else { document.getElementById('search-input').value = ""; isSearching = false; renderFeed(allNews); }
 }
 
 function handleSearch() {
     const q = document.getElementById('search-input').value.toLowerCase();
-    if(q.trim() === "") {
-        isSearching = false;
-        renderFeed(allNews);
-        return;
-    }
+    if(q.trim() === "") { isSearching = false; renderFeed(allNews); return; }
     isSearching = true;
-    const f = allNews.filter(n => n.title.toLowerCase().includes(q));
-    renderFeed(f);
+    renderFeed(allNews.filter(n => n.title.toLowerCase().includes(q)));
 }
 
 async function initApp() {
     const cachedData = localStorage.getItem(CACHE_KEY);
     const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-    const now = Date.now();
-
-    if (cachedData && cachedTime && (now - cachedTime < CACHE_DURATION)) {
+    if (cachedData && cachedTime && (Date.now() - cachedTime < CACHE_DURATION)) {
         allNews = JSON.parse(cachedData);
         renderFeed(allNews);
     } else {
@@ -185,34 +168,40 @@ async function fetchAllSources() {
 
     for (const src of SOURCES) {
         try {
-            const res = await fetch(`${src.url}&per_page=6`);
+            let finalUrl = src.url;
+            if (src.useProxy) finalUrl = PROXY + encodeURIComponent(src.url);
+
+            const res = await fetch(finalUrl);
             if(res.ok) {
-                const data = await res.json();
-                const formatted = data.map(p => ({
-                    id: src.name.replace(/\s+/g, '') + '-' + p.id,
-                    title: p.title?.rendered || "Sem título",
-                    content: p.content?.rendered || "",
-                    link: p.link || "#",
-                    source: src.name,
-                    color: src.color,
-                    date: p.date ? new Date(p.date).toISOString() : new Date().toISOString(),
-                    img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || FALLBACK_IMG
-                }));
+                let data = await res.json();
+                if (src.useProxy) data = JSON.parse(data.contents);
+
+                const formatted = data.map(p => {
+                    const uniqueId = btoa(unescape(encodeURIComponent(JSON.stringify({api: src.url, id: p.id}))));
+                    return {
+                        id: uniqueId,
+                        title: p.title?.rendered || "Sem título",
+                        content: p.content?.rendered || "",
+                        link: p.link || "#",
+                        source: src.name,
+                        color: src.color,
+                        date: p.date ? new Date(p.date).toISOString() : new Date().toISOString(),
+                        img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || FALLBACK_IMG
+                    };
+                });
                 combinedNews = [...combinedNews, ...formatted];
             }
         } catch (e) {
-            console.error(`Erro na fonte: ${src.name}`);
+            console.error(`Falha controlada ao carregar: ${src.name}`);
         }
     }
 
     combinedNews.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
     if(combinedNews.length > 0) {
         allNews = combinedNews;
         localStorage.setItem(CACHE_KEY, JSON.stringify(allNews));
         localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
     }
-    
     renderFeed(allNews);
     infLoader.classList.remove('active');
     bar.style.width = '100%';
@@ -226,26 +215,25 @@ function renderFeed(news) {
         return;
     }
     feed.innerHTML = news.map(n => `
-        <div class="news-item" onclick="if(!event.target.classList.contains('fa-share-nodes')) window.location.href='leitura.html?id=${n.id}'">
+        <div class="news-item" onclick="if(!event.target.classList.contains('share-btn-feed')) window.location.href='leitura.html?id=${n.id}'">
             <img src="${n.img}" class="news-img" onerror="this.src='${FALLBACK_IMG}'">
             <div class="news-info">
                 <span class="news-source" style="background:${n.color}">${n.source}</span>
                 <div class="news-title">${n.title}</div>
                 <div style="font-size:0.6rem; color:var(--text-meta)">${timeSince(n.date)}</div>
             </div>
-            <i class="fas fa-share-nodes share-btn-feed" onclick="shareNews('${window.location.origin}/leitura.html?id=${n.id}', '${n.title.replace(/'/g, "\\'")}')" title="Compartilhar"></i>
+            <i class="fas fa-share-nodes share-btn-feed" onclick="shareNews('${n.id}', '${n.title.replace(/'/g, "\\'")}')"></i>
         </div>
     `).join('');
 }
 
-async function shareNews(url, title) {
+async function shareNews(id, title) {
+    const fullUrl = `${window.location.origin}${window.location.pathname.replace('index.html','')}leitura.html?id=${id}`;
     if (navigator.share) {
-        try {
-            await navigator.share({ title: title, text: 'Veja esta notícia no Só Notícias:', url: url });
-        } catch (err) { console.log("Partilha cancelada"); }
+        try { await navigator.share({ title: title, text: 'Veja esta matéria no Só Notícias:', url: fullUrl }); } catch (e) {}
     } else {
-        navigator.clipboard.writeText(`${title} - ${url}`);
-        alert("Link copiado para a área de transferência!");
+        navigator.clipboard.writeText(`${title} - ${fullUrl}`);
+        alert("Link gerado e copiado com sucesso para envio!");
     }
 }
 
