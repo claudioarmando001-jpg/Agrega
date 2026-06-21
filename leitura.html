@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lendo Notícia - Times de Todos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #0284c7; --bg: #f1f5f9; --card: #ffffff;
+            --text: #0f172a; --text-meta: #64748b; --border: #e2e8f0; --radius: 20px; 
+        }
+        body.dark-mode {
+            --bg: #020617; --card: #1e293b; --text: #f8fafc; --text-meta: #94a3b8;
+            --border: #334155; --accent: #38bdf8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
+        
+        .header-read { position: sticky; top: 0; background: var(--card); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
+        .logo-main { font-weight: 800; font-size: 0.9rem; color: var(--accent); letter-spacing: -1px; }
+        
+        .article-content { padding: 20px; max-width: 800px; margin: 0 auto; }
+        .article-img { width: 100%; border-radius: 20px; margin: 15px 0; object-fit: cover; max-height: 450px; }
+        
+        .btn-copy { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-bottom: 15px; transition: all 0.2s; }
+        .btn-copy.copied { background: #10b981; color: white; border-color: #10b981; }
+
+        .wp-content p { margin-bottom: 15px; line-height: 1.7; font-size: 1rem; }
+
+        /* Aba de Relacionadas */
+        .related-section { max-width: 800px; margin: 40px auto 0 auto; padding: 20px; border-top: 2px solid var(--border); }
+        .related-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .related-grid { display: flex; flex-direction: column; gap: 12px; }
+        .related-item { display: flex; gap: 12px; background: var(--card); padding: 10px; border-radius: 12px; border: 1px solid var(--border); text-decoration: none; color: inherit; transition: 0.2s; }
+        .related-item:hover { transform: translateY(-2px); }
+        .related-thumb { width: 70px; height: 70px; border-radius: 8px; object-fit: cover; }
+        .related-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .related-headline { font-size: 0.85rem; font-weight: 700; line-height: 1.3; }
+        .related-source { font-size: 0.6rem; font-weight: 800; color: var(--accent); text-transform: uppercase; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+<header class="header-read">
+    <div style="display:flex; align-items:center; gap:15px">
+        <i class="fas fa-arrow-left" onclick="window.location.href='index.html'" style="cursor:pointer; font-size: 1.2rem;"></i>
+        <div class="logo-main">TIMES DE TODOS</div>
+    </div>
+    <i class="fas fa-moon" id="theme-icon" onclick="toggleTheme()" style="cursor:pointer"></i>
+</header>
+
+<main class="article-content" id="article-view">
+    </main>
+
+<section class="related-section">
+    <div class="related-title"><i class="fas fa-layer-group"></i> Notícias Relacionadas</div>
+    <div class="related-grid" id="related-box"></div>
+</section>
+
+<script>
+const FALLBACK_IMG = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj1PIdG6RZAkCnYz8E1wnpe11yJzX81_7GxL8akO2vFnl3Dl0aaSVYe5yRlaPIjec4amnPGW83xM5viMIADszhlsmelGtkPTsiYX4hsH40_Wede8FgCQcUSYP3Xagd22ziRSatOneaVAHqfp1WLWriLz140PMjF4Pxyw7MuyiD9-W0mn9N1wVwwjtT3bTlc/s1024/1766117715526_1.jpg";
+
+window.onload = () => {
+    if(localStorage.getItem('dark') === 'true') toggleTheme(true);
+    loadArticle();
+};
+
+function toggleTheme(init = false) {
+    if(!init) document.body.classList.toggle('dark-mode');
+    else document.body.classList.add('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('dark', isDark);
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+}
+
+function loadArticle() {
+    const params = new URLSearchParams(window.location.search);
+    const artId = params.get('id');
+    const cachedNews = localStorage.getItem("tdt_news_cache");
+
+    if (!artId || !cachedNews) {
+        document.getElementById('article-view').innerHTML = `<p>Artigo não encontrado. <a href="index.html">Voltar para o Feed</a></p>`;
+        return;
+    }
+
+    const newsArray = JSON.parse(cachedNews);
+    const article = newsArray.find(n => n.id === artId);
+
+    if (!article) {
+        document.getElementById('article-view').innerHTML = `<p>Artigo indisponível. <a href="index.html">Voltar para o Feed</a></p>`;
+        return;
+    }
+
+    // Renderiza artigo Principal
+    document.getElementById('article-view').innerHTML = `
+        <h1 id="art-title" style="margin-bottom:10px; font-size: 1.6rem; line-height: 1.3;">${article.title}</h1>
+        <div style="font-size:0.75rem; color:var(--text-meta); margin-bottom: 15px;">
+            Fonte: <span style="color:${article.color}; font-weight:bold;">${article.source}</span> • Publicado ${timeSince(article.date)}
+        </div>
+        
+        <button class="btn-copy" id="btn-copy" onclick="copyArticleText()">
+            <i class="far fa-copy"></i> <span>Copiar Artigo</span>
+        </button>
+
+        <img src="${article.img}" class="article-img" onerror="this.src='${FALLBACK_IMG}'">
+        <div id="art-content" class="wp-content">${article.content}</div>
+        
+        <button onclick="window.open('${article.link}')" style="width:100%; padding:15px; background:var(--accent); color:white; border:none; border-radius:12px; margin-top:25px; font-weight:bold; cursor:pointer;">
+            LER NO SITE ORIGINAL <i class="fas fa-external-link-alt" style="font-size:0.8rem; margin-left:5px"></i>
+        </button>
+    `;
+
+    renderRelated(newsArray, article);
+}
+
+function renderRelated(allNews, currentArticle) {
+    // Filtra para remover a notícia atual que está sendo lida
+    let related = allNews.filter(n => n.id !== currentArticle.id);
+    
+    // Tenta priorizar notícias da mesma fonte/categoria
+    let primaryRelated = related.filter(n => n.source === currentArticle.source);
+    let secondaryRelated = related.filter(n => n.source !== currentArticle.source);
+    
+    let finalRelated = [...primaryRelated, ...secondaryRelated].slice(0, 5);
+
+    const relatedBox = document.getElementById('related-box');
+    relatedBox.innerHTML = finalRelated.map(r => `
+        <a href="leitura.html?id=${r.id}" class="related-item">
+            <img src="${r.img}" class="related-thumb" onerror="this.src='${FALLBACK_IMG}'">
+            <div class="related-info">
+                <div class="related-headline">${r.title.substring(0, 75)}${r.title.length > 75 ? '...' : ''}</div>
+                <div class="related-source" style="color:${r.color}">${r.source}</div>
+            </div>
+        </a>
+    `).join('');
+}
+
+function copyArticleText() {
+    const title = document.getElementById('art-title').innerText;
+    const contentHtml = document.getElementById('art-content');
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = contentHtml.innerHTML;
+    tempDiv.querySelectorAll('p, br, h1, h2, h3, h4').forEach(el => el.prepend('\n'));
+    const cleanContent = tempDiv.innerText.trim();
+
+    const fullTextToCopy = `${title}\n\n${cleanContent}`;
+
+    navigator.clipboard.writeText(fullTextToCopy).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.classList.add('copied');
+        btn.innerHTML = `<i class="fas fa-check"></i> <span>Copiado!</span>`;
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = `<i class="far fa-copy"></i> <span>Copiar Artigo</span>`;
+        }, 2000);
+    });
+}
+
+function timeSince(dateString) {
+    const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+    let interval = seconds / 3600;
+    if (interval > 24) return Math.floor(interval / 24) + " dias atrás";
+    if (interval < 1) {
+        const mins = Math.floor(seconds / 60);
+        return mins < 1 ? "Agora mesmo" : mins + " minutos atrás";
+    }
+    return Math.floor(interval) + " horas atrás";
+}
+</script>
+</body>
+</html>
