@@ -32,16 +32,18 @@
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
         
-        .navbar { position: sticky; top: 0; background: rgba(var(--bg), 0.80); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 1000; padding: 18px 20px; border-bottom: 1px solid var(--border); }
-        .nav-top { display: flex; justify-content: center; align-items: center; max-width: 1200px; margin: 0 auto; }
-        .logo { font-weight: 800; font-size: 1.7rem; color: var(--text); text-decoration: none; letter-spacing: -1.5px; display: flex; align-items: center; gap: 6px; }
+        /* Navbar Alinhada com Busca à Direita */
+        .navbar { position: sticky; top: 0; background: rgba(var(--bg), 0.80); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 1000; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+        .nav-container { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; width: 100%; gap: 20px; }
+        .logo { font-weight: 800; font-size: 1.6rem; color: var(--text); text-decoration: none; letter-spacing: -1.5px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
         .logo span { background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        .search-bar { margin: 20px auto 5px auto; max-width: 800px; position: relative; }
-        .search-bar input { width: 100%; padding: 16px 18px 16px 52px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; box-shadow: var(--shadow-premium); outline: none; transition: 0.2s; font-size: 0.95rem; }
+        .search-bar { position: relative; width: 100%; max-width: 380px; }
+        .search-bar input { width: 100%; padding: 12px 16px 12px 44px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; box-shadow: var(--shadow-premium); outline: none; transition: 0.2s; font-size: 0.9rem; }
         .search-bar input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.15); }
-        .search-bar i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--text-meta); font-size: 1.1rem; }
+        .search-bar i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-meta); font-size: 1rem; }
 
+        /* Feed Grid */
         .feed { padding: 30px 20px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
         .news-card { display: flex; flex-direction: column; background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--border); text-decoration: none; color: inherit; overflow: hidden; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-premium); }
         .news-card:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: rgba(5, 150, 105, 0.2); }
@@ -53,23 +55,29 @@
         .news-title { font-size: 1.15rem; font-weight: 700; line-height: 1.45; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: var(--text); }
         .news-meta { font-size: 0.8rem; color: var(--text-meta); margin-top: auto; display: flex; align-items: center; gap: 6px; }
 
-        .loader { text-align: center; padding: 50px; grid-column: 1/-1; color: var(--primary); font-size: 1.8rem; }
+        .loader { text-align: center; padding: 40px; color: var(--primary); font-size: 1.8rem; width: 100%; grid-column: 1/-1; }
+
+        /* Adaptação Mobile */
+        @media (max-width: 580px) {
+            .nav-container { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .search-bar { max-width: 100%; }
+        }
     </style>
 </head>
 <body>
 
 <nav class="navbar">
-    <div class="nav-top">
+    <div class="nav-container">
         <a href="index.html" class="logo">Só<span>Notícias</span></a>
-    </div>
-    <div class="search-bar">
-        <i class="fas fa-search"></i>
-        <input type="text" id="search-input" placeholder="Escreve para filtrar ou Enter para nova busca..." oninput="localFilter()" onkeyup="if(event.key==='Enter') resetAndLoad()">
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Filtrar ou pressionar Enter..." oninput="localFilter()" onkeyup="if(event.key==='Enter') resetAndLoad()">
+        </div>
     </div>
 </nav>
 
 <main class="feed" id="feed"></main>
-<div id="scroll-anchor" class="loader"><i class="fas fa-circle-notch fa-spin"></i></div>
+<div id="loading-trigger" class="loader"><i class="fas fa-circle-notch fa-spin"></i></div>
 
 <script>
 const SOURCES = [
@@ -87,8 +95,8 @@ const SOURCES = [
     { name: "SAPO.pt", api: "https://www.sapo.pt/wp-json/wp/v2/posts?_embed", slug: "sapo" }
 ];
 
-let allPosts = [], currentPage = 1, activeRequests = 0;
-const seenTitles = new Set(); // Guarda títulos limpos para evitar repetições
+let allPosts = [], currentPage = 1, activeRequests = 0, canLoadMore = true;
+const seenTitles = new Set();
 
 function timeAgo(dateString) {
     const elapsed = new Date() - new Date(dateString);
@@ -101,62 +109,70 @@ function timeAgo(dateString) {
     return new Date(dateString).toLocaleDateString('pt-MZ', { day: 'numeric', month: 'short' });
 }
 
-// Limpa títulos para comparar e descartar duplicados óbvios
 function cleanTitle(str) {
     return str.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
 }
 
 async function loadNews() {
-    if (activeRequests > 0) return;
+    if (activeRequests > 0 || !canLoadMore) return;
     
     const searchVal = document.getElementById('search-input').value;
-    const feed = document.getElementById('feed');
-    if (currentPage === 1 && allPosts.length === 0) feed.innerHTML = '';
+    const loader = document.getElementById('loading-trigger');
+    loader.style.opacity = '1';
 
-    // Dispara pedidos para todas as APIs em simultâneo
+    let responsesReceived = 0;
+    let totalValidFromThisPage = 0;
+
     SOURCES.forEach(async (src) => {
         activeRequests++;
         try {
-            let url = `${src.api}&per_page=4&page=${currentPage}`;
+            let url = `${src.api}&per_page=3&page=${currentPage}`;
             if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
             
             const res = await fetch(url);
             const data = await res.json();
             
-            const validPosts = [];
-            data.forEach(p => {
-                const cleaned = cleanTitle(p.title.rendered);
-                // Valida se a notícia já existe em memória
-                if (!seenTitles.has(cleaned)) {
-                    seenTitles.add(cleaned);
-                    validPosts.push({
-                        id: p.id, title: p.title.rendered, date: p.date, 
-                        srcName: src.name, srcSlug: src.slug,
-                        img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/400x250?text=So+Noticias',
-                        link: `artigo.html?id=${p.id}&src=${src.slug}`
-                    });
-                }
-            });
+            if (Array.isArray(data)) {
+                const validPosts = [];
+                data.forEach(p => {
+                    const cleaned = cleanTitle(p.title.rendered);
+                    if (!seenTitles.has(cleaned)) {
+                        seenTitles.add(cleaned);
+                        validPosts.push({
+                            id: p.id, title: p.title.rendered, date: p.date, 
+                            srcName: src.name, srcSlug: src.slug,
+                            img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/400x250?text=So+Noticias',
+                            link: `artigo.html?id=${p.id}&src=${src.slug}`
+                        });
+                    }
+                });
 
-            if (validPosts.length > 0) {
-                // Adiciona e ordena imediatamente a linha do tempo global
-                allPosts = [...allPosts, ...validPosts].sort((a, b) => new Date(b.date) - new Date(a.date));
-                renderFeed(allPosts);
+                if (validPosts.length > 0) {
+                    totalValidFromThisPage += validPosts.length;
+                    allPosts = [...allPosts, ...validPosts].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    renderFeed(allPosts);
+                }
             }
-        } catch (e) { /* Falha silenciosa de API individual */ }
+        } catch (e) {}
         
         activeRequests--;
-        if(activeRequests === 0) {
-            document.getElementById('scroll-anchor').style.opacity = '0';
+        responsesReceived++;
+        
+        // Quando todas as fontes terminarem de responder à página atual
+        if (responsesReceived === SOURCES.length) {
+            loader.style.opacity = '0';
+            // Se nenhuma API retornou dados novos, bloqueia novas requisições de páginas futuras
+            if (totalValidFromThisPage === 0 && !searchVal) {
+                canLoadMore = false;
+            }
+            currentPage++;
         }
     });
-    
-    currentPage++;
 }
 
 function renderFeed(postsList) {
     const feed = document.getElementById('feed');
-    feed.innerHTML = ''; // Limpa para reordenar dinamicamente na inserção assíncrona
+    feed.innerHTML = '';
     
     postsList.forEach(p => {
         const card = document.createElement('a');
@@ -184,12 +200,19 @@ function resetAndLoad() {
     allPosts = []; 
     seenTitles.clear(); 
     currentPage = 1; 
-    document.getElementById('scroll-anchor').style.opacity = '1';
+    canLoadMore = true;
     loadNews(); 
 }
 
-const observer = new IntersectionObserver(e => e[0].isIntersecting && activeRequests === 0 && loadNews());
-observer.observe(document.getElementById('scroll-anchor'));
+// Mecanismo Nativo de Scroll Infinito Inteligente
+window.addEventListener('scroll', () => {
+    if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 200) {
+        if (activeRequests === 0 && canLoadMore) {
+            loadNews();
+        }
+    }
+});
+
 window.onload = loadNews;
 </script>
 </body>
