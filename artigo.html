@@ -1,6 +1,213 @@
 <!DOCTYPE html>
 <html lang="pt-MZ">
 <head>
+
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    let popunderURL = "https://omg10.com/4/10672967"; // Novo link Monetag
+    let lastPopTime = 0;
+    let minInterval = 10000; // Tempo mínimo entre popunders (10s)
+
+    function openPopunder() {
+        let now = new Date().getTime();
+        if (now - lastPopTime >= minInterval) {
+            let newWindow = window.open(popunderURL, "_blank");
+
+            if (newWindow) {
+                newWindow.blur();
+                window.focus();
+                lastPopTime = now;
+                console.log("Popunder aberto!");
+            } else {
+                console.log("Popunder bloqueado pelo navegador.");
+            }
+        } else {
+            console.log("Aguardando intervalo mínimo...");
+        }
+    }
+
+    function triggerPop() {
+        openPopunder(); // Popunder abre imediatamente
+    }
+
+    document.addEventListener("click", triggerPop);
+
+    document.addEventListener("mouseleave", function(event) {
+        if (event.clientY <= 0) {
+            triggerPop();
+        }
+    });
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") {
+            triggerPop();
+        }
+    });
+});
+</script>
+<style>
+:root {
+    /* Cor de segurança caso o site não tenha uma cor definida */
+    --cor-primaria: #007bff; 
+}
+
+.banner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    display: none; /* Controlado pelo JS */
+    align-items: center;
+    justify-content: center;
+    z-index: 1000000; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.banner-box {
+    position: relative;
+    background: #ffffff;
+    padding: 35px 25px 25px;
+    width: 92%;
+    max-width: 400px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: popIn 0.5s cubic-bezier(0.26, 0.53, 0.74, 1.48);
+}
+
+.banner-box h3 {
+    margin-bottom: 20px;
+    color: #222;
+    font-size: 1.3rem;
+    line-height: 1.4;
+}
+
+.fechar-canto {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #f0f0f0;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    color: #888;
+    transition: 0.2s;
+}
+
+.fechar-canto:hover {
+    background: #e0e0e0;
+    color: #000;
+}
+
+.banner-options button {
+    display: block;
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    background: var(--cor-primaria);
+    color: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.banner-options button:hover {
+    filter: brightness(1.2);
+    transform: scale(1.02);
+}
+
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.8) translateY(30px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+</style>
+
+<div id="banner1" class="banner-overlay">
+    <div class="banner-box">
+        <button class="fechar-canto" onclick="acaoUsuario(1)">×</button>
+        <h3>Como você encontrou nosso site?</h3>
+        <div class="banner-options">
+            <button onclick="acaoUsuario(1)">Redes Sociais</button>
+            <button onclick="acaoUsuario(1)">Google / Busca</button>
+            <button onclick="acaoUsuario(1)">Recomendação</button>
+        </div>
+    </div>
+</div>
+
+<div id="banner2" class="banner-overlay">
+    <div class="banner-box">
+        <button class="fechar-canto" onclick="acaoUsuario(2)">×</button>
+        <h3>Você está gostando do conteúdo?</h3>
+        <div class="banner-options">
+            <button onclick="acaoUsuario(2)">Sim, muito!</button>
+            <button onclick="acaoUsuario(2)">Pode melhorar</button>
+            <button onclick="acaoUsuario(2)">Ainda explorando</button>
+        </div>
+    </div>
+</div>
+
+<div id="banner3" class="banner-overlay">
+    <div class="banner-box">
+        <button class="fechar-canto" onclick="acaoUsuario(3)">×</button>
+        <h3>Gostaria de ver mais conteúdos assim?</h3>
+        <div class="banner-options">
+            <button onclick="acaoUsuario(3)">Com certeza!</button>
+            <button onclick="acaoUsuario(3)">Talvez</button>
+            <button onclick="acaoUsuario(3)">Agora não</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Tenta capturar a cor principal do seu site (links ou botões existentes)
+    const ref = document.querySelector('a, button:not(.fechar-canto), h1');
+    if (ref) {
+        const corAtiva = window.getComputedStyle(ref).color;
+        if(corAtiva !== 'rgba(0, 0, 0, 0)' && corAtiva !== 'rgb(255, 255, 255)') {
+            document.documentElement.style.setProperty('--cor-primaria', corAtiva);
+        }
+    }
+
+    // DISPARO INICIAL: 10 Segundos
+    setTimeout(() => mostrarBanner(1), 10000);
+});
+
+function mostrarBanner(n) {
+    const b = document.getElementById("banner" + n);
+    if(b) b.style.display = "flex";
+}
+
+function esconderBanner(n) {
+    const b = document.getElementById("banner" + n);
+    if(b) b.style.display = "none";
+}
+
+function acaoUsuario(atual) {
+    esconderBanner(atual);
+
+    // Mantendo os intervalos originais para os próximos
+    if (atual === 1) {
+        setTimeout(() => mostrarBanner(2), 20000);
+    } else if (atual === 2) {
+        setTimeout(() => mostrarBanner(3), 40000);
+    }
+}
+</script>
+
+
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leitura | Só Notícias</title>
