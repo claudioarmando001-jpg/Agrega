@@ -3,67 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Só Notícias | Moçambique</title>
+    <title>Só Notícias | Premium Feed</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #047857;
-            --primary-dark: #065f46;
-            --bg: #fdfdfc;
+            --primary: #059669;
+            --primary-gradient: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+            --bg: #fafafa;
             --card: #ffffff;
-            --text: #111827;
-            --text-meta: #6b7280;
-            --border: #e5e7eb;
-            --radius-lg: 16px;
-            --radius-md: 12px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --text: #0f172a;
+            --text-meta: #64748b;
+            --border: #f1f5f9;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.02);
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg: #0f172a;
-                --card: #1e293b;
-                --text: #f3f4f6;
-                --text-meta: #9ca3af;
-                --border: #334155;
+                --bg: #0b0f19;
+                --card: #151f32;
+                --text: #f8fafc;
+                --text-meta: #94a3b8;
+                --border: #1e293b;
+                --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
             }
         }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
         
-        .navbar { position: sticky; top: 0; background: rgba(var(--bg), 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 1000; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+        .navbar { position: sticky; top: 0; background: rgba(var(--bg), 0.80); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 1000; padding: 18px 20px; border-bottom: 1px solid var(--border); }
         .nav-top { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; }
-        .logo { font-weight: 800; font-size: 1.6rem; color: var(--text); text-decoration: none; letter-spacing: -1.5px; display: flex; align-items: center; gap: 8px; }
-        .logo span { color: var(--primary); }
+        .logo { font-weight: 800; font-size: 1.7rem; color: var(--text); text-decoration: none; letter-spacing: -1.5px; display: flex; align-items: center; gap: 6px; }
+        .logo span { background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        .btn-saved { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-        .btn-saved.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-saved { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-premium); }
+        .btn-saved.active { background: var(--primary-gradient); color: white; border-color: transparent; }
 
-        .search-bar { margin: 16px auto 0 auto; max-width: 800px; position: relative; }
-        .search-bar input { width: 100%; padding: 14px 18px 14px 48px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; box-shadow: var(--shadow-sm); }
-        .search-bar i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-meta); }
+        .search-bar { margin: 20px auto 5px auto; max-width: 800px; position: relative; }
+        .search-bar input { width: 100%; padding: 16px 18px 16px 52px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; box-shadow: var(--shadow-premium); outline: none; transition: 0.2s; font-size: 0.95rem; }
+        .search-bar input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.15); }
+        .search-bar i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--text-meta); font-size: 1.1rem; }
 
-        /* Estilos do Slider Artigos em Destaque */
-        .slider-container { max-width: 1200px; margin: 24px auto 0 auto; padding: 0 20px; position: relative; display: none; }
-        .slider-wrapper { overflow: hidden; border-radius: var(--radius-lg); position: relative; height: 380px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
-        .slides { display: flex; transition: transform 0.5s ease-in-out; height: 100%; }
-        .slide-item { min-width: 100%; height: 100%; position: relative; text-decoration: none; color: white; }
-        .slide-img { width: 100%; height: 100%; object-fit: cover; }
-        .slide-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 40px 30px 30px; display: flex; flex-direction: column; justify-content: flex-end; }
-        .slide-tag { align-self: flex-start; background: var(--primary); font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; margin-bottom: 12px; }
-        .slide-title { font-size: 1.6rem; font-weight: 800; line-height: 1.3; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-        .slider-nav { position: absolute; bottom: 20px; right: 30px; display: flex; gap: 8px; z-index: 10; }
-        .slider-dot { width: 8px; height: 8px; background: rgba(255,255,255,0.4); border-radius: 50%; cursor: pointer; transition: 0.2s; }
-        .slider-dot.active { background: white; transform: scale(1.3); }
-
-        /* Feed */
-        .feed { padding: 30px 20px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
-        .news-card { display: flex; flex-direction: column; background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--border); text-decoration: none; color: inherit; overflow: hidden; transition: 0.3s; box-shadow: var(--shadow-sm); }
-        .news-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .news-img { width: 100%; height: 200px; object-fit: cover; background: #eee; }
-        .news-body { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
-        .news-tag { font-size: 0.75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 10px; }
-        .news-title { font-size: 1.1rem; font-weight: 700; line-height: 1.4; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .feed { padding: 30px 20px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
+        .news-card { display: flex; flex-direction: column; background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--border); text-decoration: none; color: inherit; overflow: hidden; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-premium); }
+        .news-card:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: rgba(5, 150, 105, 0.2); }
+        .news-img-container { width: 100%; height: 210px; overflow: hidden; background: #eee; }
+        .news-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        .news-card:hover .news-img { transform: scale(1.04); }
+        .news-body { padding: 24px; flex-grow: 1; display: flex; flex-direction: column; }
+        .news-tag { font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.05em; }
+        .news-title { font-size: 1.15rem; font-weight: 700; line-height: 1.45; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: var(--text); }
         .news-meta { font-size: 0.8rem; color: var(--text-meta); margin-top: auto; display: flex; align-items: center; gap: 6px; }
 
         .loader { text-align: center; padding: 50px; grid-column: 1/-1; color: var(--primary); font-size: 1.8rem; }
@@ -78,17 +68,9 @@
     </div>
     <div class="search-bar">
         <i class="fas fa-search"></i>
-        <input type="text" id="search-input" placeholder="Pesquisar notícias em tempo real..." onkeyup="if(event.key==='Enter') resetAndLoad()">
+        <input type="text" id="search-input" placeholder="Escreve para filtrar ou Enter para busca profunda..." oninput="localFilter()" onkeyup="if(event.key==='Enter') resetAndLoad()">
     </div>
 </nav>
-
-<!-- Container Destaques Slide -->
-<div class="slider-container" id="slider-block">
-    <div class="slider-wrapper">
-        <div class="slides" id="slider-content"></div>
-        <div class="slider-nav" id="slider-dots"></div>
-    </div>
-</div>
 
 <main class="feed" id="feed"></main>
 <div id="scroll-anchor" class="loader"><i class="fas fa-circle-notch fa-spin"></i></div>
@@ -109,27 +91,17 @@ const SOURCES = [
     { name: "SAPO.pt", api: "https://www.sapo.pt/wp-json/wp/v2/posts?_embed", slug: "sapo" }
 ];
 
-let allPosts = [], currentPage = 1, isFetching = false, isSavedView = false, activeSlide = 0, slideInterval;
+let allPosts = [], currentPage = 1, isFetching = false, isSavedView = false;
 
 function timeAgo(dateString) {
-    const now = new Date();
-    const past = new Date(dateString);
-    const msPerMinute = 60 * 1000;
-    const msPerHour = msPerMinute * 60;
-    const msPerDay = msPerHour * 24;
-    const elapsed = now - past;
-
-    if (elapsed < msPerMinute) return 'Agora mesmo';
-    if (elapsed < msPerHour) {
-        const mins = Math.round(elapsed / msPerMinute);
-        return `Há ${mins}min atrás`;
-    }
-    if (elapsed < msPerDay) {
-        const hours = Math.round(elapsed / msPerHour);
-        return `Há ${hours}h atrás`;
-    }
-    if (elapsed < msPerDay * 2) return 'Ontem';
-    return past.toLocaleDateString('pt-MZ', { day: 'numeric', month: 'short' });
+    const elapsed = new Date() - new Date(dateString);
+    const mins = Math.round(elapsed / 60000);
+    const hours = Math.round(mins / 60);
+    if (mins < 1) return 'Agora mesmo';
+    if (mins < 60) return `Há ${mins}min atrás`;
+    if (hours < 24) return `Há ${hours}h atrás`;
+    if (hours < 48) return 'Ontem';
+    return new Date(dateString).toLocaleDateString('pt-MZ', { day: 'numeric', month: 'short' });
 }
 
 async function loadNews() {
@@ -140,14 +112,14 @@ async function loadNews() {
 
     const fetchPromises = SOURCES.map(async (src) => {
         try {
-            let url = `${src.api}&per_page=3&page=${currentPage}`;
+            let url = `${src.api}&per_page=4&page=${currentPage}`;
             if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
             const res = await fetch(url);
             const data = await res.json();
             return data.map(p => ({
                 id: p.id, title: p.title.rendered, date: p.date, 
                 srcName: src.name, srcSlug: src.slug,
-                img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/400x250?text=S%C3%B3+Not%C3%ADcias',
+                img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/400x250?text=So+Noticias',
                 link: `artigo.html?id=${p.id}&src=${src.slug}`
             }));
         } catch (e) { return []; }
@@ -156,76 +128,22 @@ async function loadNews() {
     const results = await Promise.all(fetchPromises);
     const newPosts = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
     allPosts = [...allPosts, ...newPosts];
-    
-    if (currentPage === 1 && !searchVal && allPosts.length > 0) {
-        buildSlider(allPosts.slice(0, 5));
-    }
-    
-    renderFeed();
+    renderFeed(allPosts);
     isFetching = false;
     currentPage++;
 }
 
-function buildSlider(slidesData) {
-    const container = document.getElementById('slider-block');
-    const content = document.getElementById('slider-content');
-    const dotsContainer = document.getElementById('slider-dots');
-    
-    content.innerHTML = '';
-    dotsContainer.innerHTML = '';
-    clearInterval(slideInterval);
-
-    slidesData.forEach((p, idx) => {
-        const slide = document.createElement('a');
-        slide.className = 'slide-item';
-        slide.href = p.link;
-        slide.innerHTML = `
-            <img class="slide-img" src="${p.img}">
-            <div class="slide-overlay">
-                <span class="slide-tag">${p.srcName}</span>
-                <h2 class="slide-title">${p.title}</h2>
-                <div style="font-size:0.8rem; opacity:0.8"><i class="far fa-clock"></i> ${timeAgo(p.date)}</div>
-            </div>`;
-        content.appendChild(slide);
-
-        const dot = document.createElement('div');
-        dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
-        dot.onclick = () => moveSlide(idx);
-        dotsContainer.appendChild(dot);
-    });
-
-    container.style.display = 'block';
-    activeSlide = 0;
-    slideInterval = setInterval(() => {
-        moveSlide((activeSlide + 1) % slidesData.length);
-    }, 4500);
-}
-
-function moveSlide(idx) {
-    const content = document.getElementById('slider-content');
-    const dots = document.querySelectorAll('.slider-dot');
-    if(!content || dots.length === 0) return;
-    activeSlide = idx;
-    content.style.transform = `translateX(-${idx * 100}%)`;
-    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-}
-
-function renderFeed() {
+function renderFeed(postsList) {
     const feed = document.getElementById('feed');
-    // Se for primeira página, isola do topo os itens mostrados no slider se aplicável
-    let displayList = isSavedView ? JSON.parse(localStorage.getItem('cld_saved') || '[]') : allPosts;
-    
-    if(currentPage === 1) {
-        feed.innerHTML = '';
-        if(!isSavedView && !document.getElementById('search-input').value) displayList = displayList.slice(5);
-    }
+    if(currentPage === 1 || isSavedView) feed.innerHTML = '';
+    const displayList = isSavedView ? JSON.parse(localStorage.getItem('cld_saved') || '[]') : postsList;
     
     displayList.forEach(p => {
         const card = document.createElement('a');
         card.className = 'news-card';
         card.href = p.link;
         card.innerHTML = `
-            <img class="news-img" src="${p.img}" loading="lazy">
+            <div class="news-img-container"><img class="news-img" src="${p.img}" loading="lazy"></div>
             <div class="news-body">
                 <span class="news-tag">${p.srcName}</span>
                 <h3 class="news-title">${p.title}</h3>
@@ -235,12 +153,19 @@ function renderFeed() {
     });
 }
 
+// Filtro Instantâneo Local Dinâmico
+function localFilter() {
+    const val = document.getElementById('search-input').value.toLowerCase();
+    if(!val) { renderFeed(allPosts); return; }
+    const filtered = allPosts.filter(p => p.title.toLowerCase().includes(val) || p.srcName.toLowerCase().includes(val));
+    renderFeed(filtered);
+}
+
 function toggleSavedView() {
     isSavedView = !isSavedView;
     document.getElementById('bookmark-btn').classList.toggle('active', isSavedView);
     document.getElementById('scroll-anchor').style.display = isSavedView ? 'none' : 'block';
-    document.getElementById('slider-block').style.display = isSavedView ? 'none' : 'block';
-    renderFeed();
+    renderFeed(allPosts);
 }
 
 function resetAndLoad() { allPosts = []; currentPage = 1; loadNews(); }
