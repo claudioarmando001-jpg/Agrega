@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Só Notícias | Linha do Tempo</title>
+    <title>Só Notícias | Tempo Real</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -64,7 +64,7 @@
     </div>
     <div class="search-bar">
         <i class="fas fa-search"></i>
-        <input type="text" id="search-input" placeholder="Escreve para filtrar ou Enter para busca profunda..." oninput="localFilter()" onkeyup="if(event.key==='Enter') resetAndLoad()">
+        <input type="text" id="search-input" placeholder="Escreve para filtrar ou Enter para nova busca..." oninput="localFilter()" onkeyup="if(event.key==='Enter') resetAndLoad()">
     </div>
 </nav>
 
@@ -87,7 +87,8 @@ const SOURCES = [
     { name: "SAPO.pt", api: "https://www.sapo.pt/wp-json/wp/v2/posts?_embed", slug: "sapo" }
 ];
 
-let allPosts = [], currentPage = 1, isFetching = false;
+let allPosts = [], currentPage = 1, activeRequests = 0;
+const seenTitles = new Set(); // Guarda títulos limpos para evitar repetições
 
 function timeAgo(dateString) {
     const elapsed = new Date() - new Date(dateString);
@@ -100,38 +101,62 @@ function timeAgo(dateString) {
     return new Date(dateString).toLocaleDateString('pt-MZ', { day: 'numeric', month: 'short' });
 }
 
+// Limpa títulos para comparar e descartar duplicados óbvios
+function cleanTitle(str) {
+    return str.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+}
+
 async function loadNews() {
-    if (isFetching) return;
-    isFetching = true;
+    if (activeRequests > 0) return;
     
     const searchVal = document.getElementById('search-input').value;
+    const feed = document.getElementById('feed');
+    if (currentPage === 1 && allPosts.length === 0) feed.innerHTML = '';
 
-    const fetchPromises = SOURCES.map(async (src) => {
+    // Dispara pedidos para todas as APIs em simultâneo
+    SOURCES.forEach(async (src) => {
+        activeRequests++;
         try {
             let url = `${src.api}&per_page=4&page=${currentPage}`;
             if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
+            
             const res = await fetch(url);
             const data = await res.json();
-            return data.map(p => ({
-                id: p.id, title: p.title.rendered, date: p.date, 
-                srcName: src.name, srcSlug: src.slug,
-                img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/400x250?text=So+Noticias',
-                link: `artigo.html?id=${p.id}&src=${src.slug}`
-            }));
-        } catch (e) { return []; }
-    });
+            
+            const validPosts = [];
+            data.forEach(p => {
+                const cleaned = cleanTitle(p.title.rendered);
+                // Valida se a notícia já existe em memória
+                if (!seenTitles.has(cleaned)) {
+                    seenTitles.add(cleaned);
+                    validPosts.push({
+                        id: p.id, title: p.title.rendered, date: p.date, 
+                        srcName: src.name, srcSlug: src.slug,
+                        img: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/400x250?text=So+Noticias',
+                        link: `artigo.html?id=${p.id}&src=${src.slug}`
+                    });
+                }
+            });
 
-    const results = await Promise.all(fetchPromises);
-    const newPosts = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
-    allPosts = [...allPosts, ...newPosts];
-    renderFeed(allPosts);
-    isFetching = false;
+            if (validPosts.length > 0) {
+                // Adiciona e ordena imediatamente a linha do tempo global
+                allPosts = [...allPosts, ...validPosts].sort((a, b) => new Date(b.date) - new Date(a.date));
+                renderFeed(allPosts);
+            }
+        } catch (e) { /* Falha silenciosa de API individual */ }
+        
+        activeRequests--;
+        if(activeRequests === 0) {
+            document.getElementById('scroll-anchor').style.opacity = '0';
+        }
+    });
+    
     currentPage++;
 }
 
 function renderFeed(postsList) {
     const feed = document.getElementById('feed');
-    if(currentPage === 1) feed.innerHTML = '';
+    feed.innerHTML = ''; // Limpa para reordenar dinamicamente na inserção assíncrona
     
     postsList.forEach(p => {
         const card = document.createElement('a');
@@ -155,8 +180,15 @@ function localFilter() {
     renderFeed(filtered);
 }
 
-function resetAndLoad() { allPosts = []; currentPage = 1; loadNews(); }
-const observer = new IntersectionObserver(e => e[0].isIntersecting && loadNews());
+function resetAndLoad() { 
+    allPosts = []; 
+    seenTitles.clear(); 
+    currentPage = 1; 
+    document.getElementById('scroll-anchor').style.opacity = '1';
+    loadNews(); 
+}
+
+const observer = new IntersectionObserver(e => e[0].isIntersecting && activeRequests === 0 && loadNews());
 observer.observe(document.getElementById('scroll-anchor'));
 window.onload = loadNews;
 </script>
