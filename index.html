@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Só Notícias | Premium Feed</title>
+    <title>Só Notícias | Linha do Tempo</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -33,13 +33,10 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
         
         .navbar { position: sticky; top: 0; background: rgba(var(--bg), 0.80); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 1000; padding: 18px 20px; border-bottom: 1px solid var(--border); }
-        .nav-top { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; }
+        .nav-top { display: flex; justify-content: center; align-items: center; max-width: 1200px; margin: 0 auto; }
         .logo { font-weight: 800; font-size: 1.7rem; color: var(--text); text-decoration: none; letter-spacing: -1.5px; display: flex; align-items: center; gap: 6px; }
         .logo span { background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        .btn-saved { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-premium); }
-        .btn-saved.active { background: var(--primary-gradient); color: white; border-color: transparent; }
-
         .search-bar { margin: 20px auto 5px auto; max-width: 800px; position: relative; }
         .search-bar input { width: 100%; padding: 16px 18px 16px 52px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; box-shadow: var(--shadow-premium); outline: none; transition: 0.2s; font-size: 0.95rem; }
         .search-bar input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.15); }
@@ -64,7 +61,6 @@
 <nav class="navbar">
     <div class="nav-top">
         <a href="index.html" class="logo">Só<span>Notícias</span></a>
-        <button id="bookmark-btn" class="btn-saved" onclick="toggleSavedView()"><i class="far fa-bookmark"></i> Salvos</button>
     </div>
     <div class="search-bar">
         <i class="fas fa-search"></i>
@@ -91,7 +87,7 @@ const SOURCES = [
     { name: "SAPO.pt", api: "https://www.sapo.pt/wp-json/wp/v2/posts?_embed", slug: "sapo" }
 ];
 
-let allPosts = [], currentPage = 1, isFetching = false, isSavedView = false;
+let allPosts = [], currentPage = 1, isFetching = false;
 
 function timeAgo(dateString) {
     const elapsed = new Date() - new Date(dateString);
@@ -105,7 +101,7 @@ function timeAgo(dateString) {
 }
 
 async function loadNews() {
-    if (isFetching || isSavedView) return;
+    if (isFetching) return;
     isFetching = true;
     
     const searchVal = document.getElementById('search-input').value;
@@ -135,10 +131,9 @@ async function loadNews() {
 
 function renderFeed(postsList) {
     const feed = document.getElementById('feed');
-    if(currentPage === 1 || isSavedView) feed.innerHTML = '';
-    const displayList = isSavedView ? JSON.parse(localStorage.getItem('cld_saved') || '[]') : postsList;
+    if(currentPage === 1) feed.innerHTML = '';
     
-    displayList.forEach(p => {
+    postsList.forEach(p => {
         const card = document.createElement('a');
         card.className = 'news-card';
         card.href = p.link;
@@ -153,19 +148,11 @@ function renderFeed(postsList) {
     });
 }
 
-// Filtro Instantâneo Local Dinâmico
 function localFilter() {
     const val = document.getElementById('search-input').value.toLowerCase();
     if(!val) { renderFeed(allPosts); return; }
     const filtered = allPosts.filter(p => p.title.toLowerCase().includes(val) || p.srcName.toLowerCase().includes(val));
     renderFeed(filtered);
-}
-
-function toggleSavedView() {
-    isSavedView = !isSavedView;
-    document.getElementById('bookmark-btn').classList.toggle('active', isSavedView);
-    document.getElementById('scroll-anchor').style.display = isSavedView ? 'none' : 'block';
-    renderFeed(allPosts);
 }
 
 function resetAndLoad() { allPosts = []; currentPage = 1; loadNews(); }
