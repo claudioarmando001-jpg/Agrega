@@ -17,24 +17,20 @@
         .container { max-width: 740px; margin: 100px auto 0; padding: 20px; }
         .source-label { color: var(--primary); font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; margin-bottom: 18px; display: inline-block; background: rgba(5, 150, 105, 0.1); padding: 6px 14px; border-radius: 8px; }
         
-        h1 { font-size: 2.5rem; line-height: 1.2; font-weight: 800; margin-bottom: 25px; letter-spacing: -1.5px; }
+        h1 { font-size: 2.5rem; line-height: 1.2; font-weight: 800; margin-bottom: 35px; letter-spacing: -1.5px; }
         
         /* Player de Áudio - Estilo Canva */
-        .audio-player { background: var(--surface); border: 1px solid var(--border); padding: 14px 20px; border-radius: var(--radius-md); display: flex; align-items: center; gap: 12px; margin-bottom: 30px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+        .audio-player { background: var(--surface); border: 1px solid var(--border); padding: 14px 20px; border-radius: var(--radius-md); display: flex; align-items: center; gap: 12px; margin-bottom: 40px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
         .audio-title { font-size: 0.85rem; font-weight: 700; color: var(--text-meta); margin-right: auto; }
         .audio-btn { background: var(--border); border: none; width: 38px; height: 38px; border-radius: 50%; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .audio-btn:hover { background: var(--primary); color: white; }
         .audio-btn.main-play { background: var(--primary-gradient); color: white; width: 44px; height: 44px; }
-
-        .btn-save { border: 1px solid var(--border); padding: 12px 24px; border-radius: 100px; font-weight: 700; cursor: pointer; background: var(--surface); color: var(--text); font-family: inherit; transition: 0.2s; margin-bottom: 40px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
-        .btn-save.active { background: #facc15; color: #000; border-color: #facc15; }
 
         .main-img { width: 100%; border-radius: var(--radius-lg); margin-bottom: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.06); }
         .content { font-family: 'Lora', serif; font-size: 1.25rem; line-height: 2; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 40px; }
         .content p { margin-bottom: 1.8rem; }
         .content img { width: 100%; border-radius: var(--radius-md); margin: 20px 0; }
         
-        /* Relacionadas */
         .related-section { margin-top: 50px; }
         .related-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 25px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
         .related-grid { display: flex; flex-direction: column; gap: 16px; }
@@ -59,14 +55,13 @@
     <div id="source-tag" class="source-label">...</div>
     <h1 id="title">...</h1>
     
+    <!-- Player de Áudio Simplificado -->
     <div class="audio-player">
         <div class="audio-title"><i class="fas fa-volume-up"></i> Ouvir matéria</div>
         <button class="audio-btn main-play" onclick="speakText()" title="Ouvir"><i class="fas fa-play"></i></button>
         <button class="audio-btn" onclick="pauseText()" title="Pausar"><i class="fas fa-pause"></i></button>
         <button class="audio-btn" onclick="resumeText()" title="Continuar"><i class="fas fa-forward"></i></button>
     </div>
-
-    <button id="saveBtn" class="btn-save" onclick="toggleSave()"><i class="far fa-bookmark"></i> Guardar para ler depois</button>
 
     <img id="feat-img" class="main-img" style="display:none">
     <div id="content" class="content"></div>
@@ -88,7 +83,7 @@
         'desafio': 'https://jornaldesafio.co.mz/wp-json/wp/v2/posts/', 'abola': 'https://www.abola.pt/wp-json/wp/v2/posts/',
         'portalmoz': 'https://portalmoznews.com/wp-json/wp/v2/posts/', 'sapo': 'https://www.sapo.pt/wp-json/wp/v2/posts/'
     };
-    let currentPost = null, synth = window.speechSynthesis, utterance = null;
+    let synth = window.speechSynthesis, utterance = null;
 
     function timeAgo(dateString) {
         const elapsed = new Date() - new Date(dateString);
@@ -106,19 +101,16 @@
             const res = await fetch(`${APIS[src]}${id}?_embed`);
             const p = await res.json();
             
-            currentPost = { id: p.id, title: p.title.rendered, srcSlug: src, link: location.href };
             document.getElementById('source-tag').innerText = src.toUpperCase();
             document.getElementById('title').innerHTML = p.title.rendered;
             document.getElementById('content').innerHTML = p.content.rendered;
             
             const imgUrl = p._embedded?.['wp:featuredmedia']?.[0]?.source_url;
             if(imgUrl) { const img = document.getElementById('feat-img'); img.src = imgUrl; img.style.display = 'block'; }
-            updateSaveBtn();
             loadRelatedNews(src, id);
         } catch(e) { document.getElementById('title').innerText = "Erro ao carregar."; }
     }
 
-    /* Motores de Leitura de Áudio Sem Limitações */
     function speakText() {
         synth.cancel();
         const textToRead = document.getElementById('title').innerText + ". " + document.getElementById('content').innerText;
@@ -154,24 +146,8 @@
         } catch(e) { container.innerHTML = '<div>Sem recomendações.</div>'; }
     }
 
-    function toggleSave() {
-        let saved = JSON.parse(localStorage.getItem('cld_saved') || '[]');
-        const idx = saved.findIndex(x => x.id === currentPost.id);
-        idx > -1 ? saved.splice(idx, 1) : saved.push(currentPost);
-        localStorage.setItem('cld_saved', JSON.stringify(saved));
-        updateSaveBtn();
-    }
-
-    function updateSaveBtn() {
-        const saved = JSON.parse(localStorage.getItem('cld_saved') || '[]');
-        const isSaved = saved.some(x => x.id === currentPost.id);
-        const btn = document.getElementById('saveBtn');
-        btn.classList.toggle('active', isSaved);
-        btn.innerHTML = isSaved ? '<i class="fas fa-bookmark"></i> Guardada' : '<i class="far fa-bookmark"></i> Guardar para ler depois';
-    }
-
-    function share() { navigator.share({ title: currentPost.title, url: location.href }); }
-    window.onbeforeunload = () => synth.cancel(); // Para o áudio se mudar de página
+    function share() { navigator.share({ title: document.getElementById('title').innerText, url: location.href }); }
+    window.onbeforeunload = () => synth.cancel();
     window.onload = loadArticle;
 </script>
 </body>
