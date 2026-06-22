@@ -26,7 +26,6 @@
         .content p { margin-bottom: 1.8rem; }
         .content img { width: 100%; border-radius: 12px; margin: 20px 0; }
         
-        /* Seção de Notícias Relacionadas */
         .related-section { margin-top: 50px; }
         .related-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 25px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
         .related-title i { color: var(--primary); }
@@ -36,7 +35,7 @@
         .related-img { width: 100px; height: 75px; object-fit: cover; border-radius: 8px; background: #eee; flex-shrink: 0; }
         .related-info { display: flex; flex-direction: column; justify-content: center; }
         .related-headline { font-size: 0.95rem; font-weight: 700; line-height: 1.3; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .related-date { font-size: 0.8rem; color: var(--text-meta); }
+        .related-date { font-size: 0.8rem; color: var(--text-meta); display: flex; align-items: center; gap: 4px; }
 
         footer { margin-top: 60px; padding: 40px 0; text-align: center; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--text-meta); }
     </style>
@@ -86,6 +85,21 @@
     };
     let currentPost = null;
 
+    function timeAgo(dateString) {
+        const now = new Date();
+        const past = new Date(dateString);
+        const msPerMinute = 60 * 1000;
+        const msPerHour = msPerMinute * 60;
+        const msPerDay = msPerHour * 24;
+        const elapsed = now - past;
+
+        if (elapsed < msPerMinute) return 'Agora mesmo';
+        if (elapsed < msPerHour) return `Há ${Math.round(elapsed / msPerMinute)}min atrás`;
+        if (elapsed < msPerDay) return `Há ${Math.round(elapsed / msPerHour)}h atrás`;
+        if (elapsed < msPerDay * 2) return 'Ontem';
+        return past.toLocaleDateString('pt-MZ', { day: 'numeric', month: 'short' });
+    }
+
     async function loadArticle() {
         const urlParams = new URLSearchParams(window.location.search);
         const src = urlParams.get('src'), id = urlParams.get('id');
@@ -107,9 +121,7 @@
                 img.style.display = 'block';
             }
             updateSaveBtn();
-            
             loadRelatedNews(src, id);
-
         } catch(e) { 
             document.getElementById('title').innerText = "Erro ao carregar conteúdo."; 
         }
@@ -127,7 +139,7 @@
             posts.forEach(p => {
                 if(p.id == currentId || count >= 5) return;
                 
-                const img = p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/150?text=Só+Notícias';
+                const img = p._embedded?.['wp:featuredmedia']?.[0]?.source_url || 'https://via.placeholder.com/150?text=S%C3%B3+Not%C3%ADcias';
                 const card = document.createElement('a');
                 card.className = 'related-card';
                 card.href = `artigo.html?id=${p.id}&src=${src}`;
@@ -135,16 +147,16 @@
                     <img class="related-img" src="${img}" loading="lazy">
                     <div class="related-info">
                         <div class="related-headline">${p.title.rendered}</div>
-                        <div class="related-date">${new Date(p.date).toLocaleDateString()}</div>
+                        <div class="related-date"><i class="far fa-clock"></i> ${timeAgo(p.date)}</div>
                     </div>
                 `;
                 container.appendChild(card);
                 count++;
             });
 
-            if (count === 0) container.innerHTML = '<div style="color:var(--text-meta)">Nenhuma notícia relacionada encontrada.</div>';
+            if (count === 0) container.innerHTML = '<div>Nenhuma notícia relacionada encontrada.</div>';
         } catch(e) {
-            container.innerHTML = '<div style="color:var(--text-meta)">Não foi possível carregar as notícias relacionadas.</div>';
+            container.innerHTML = '<div>Não foi possível obter dados recomendados.</div>';
         }
     }
 
